@@ -7,6 +7,7 @@ import "./index.css";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
 import { AdminLayout } from "./routes/admin/AdminLayout";
+import { AdminFilteringPage } from "./routes/admin/AdminFilteringPage";
 import { AdminIndexPage } from "./routes/admin/AdminIndexPage";
 import { AdminLeaguesPage } from "./routes/admin/leagues/AdminLeaguesPage";
 import { AdminLogsPage } from "./routes/admin/AdminLogsPage";
@@ -83,6 +84,7 @@ createRoot(document.getElementById("root")!).render(
                 />
 
                 <Route path="leagues" element={<AdminLeaguesPage />} />
+                <Route path="filtering" element={<AdminFilteringPage />} />
                 <Route path="logs" element={<AdminLogsPage />} />
               </Route>
             </Route>

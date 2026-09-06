@@ -4,6 +4,7 @@ import { NavLink, useLocation } from "react-router";
 import {
   ChevronRight,
   ChevronsUpDown,
+  Filter,
   Home,
   ListTree,
   LogOut,
@@ -60,6 +61,12 @@ const adminLinks = [
     label: "Manage Leagues",
     to: "/app/admin/leagues",
     icon: ListTree,
+    exact: false,
+  },
+  {
+    label: "Seed Filtering",
+    to: "/app/admin/filtering",
+    icon: Filter,
     exact: false,
   },
   {
