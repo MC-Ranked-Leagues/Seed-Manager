@@ -15,7 +15,7 @@
 - Reuse existing UI where suitable. Avoid abstractions used only once.
 - Prefer one React component per file; keep closely related helpers together
   when that is clearer. Put reusable helpers in the relevant `lib` directory.
-- Use `@/*` for `web/src` imports and `@/convex/*` for this app's backend.
+- Use `@/*` for `src` imports and `@/convex/*` for this app's backend.
 - Keep backend implementations private. External callers use HTTP interfaces.
 - Seed owns the published-history interface documented in
   `docs/published-history.md`. Preserve compatibility with League's local schema.

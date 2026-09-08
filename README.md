@@ -6,7 +6,8 @@ workflows, comments, and audit logging.
 
 ## Structure
 
-- `web/`: React and Vite website.
+- `src/`: React website source.
+- `public/`: Static website assets.
 - `convex/`: schema, authentication, backend functions, and HTTP endpoints.
 - `docs/`: workflows and the published-history interface.
 
@@ -57,13 +58,11 @@ See [published-history.md](docs/published-history.md) for compatibility rules.
 ## Hosting and migration
 
 The frontend build runs at the repository root with `bun run build:cloudflare`
-and produces `web/dist`. Configure `VITE_CONVEX_URL` in the hosting environment.
+and produces `dist`. Configure `VITE_CONVEX_URL` in the hosting environment.
 
 The prepared backend deployment workflow is manual and additionally requires
 `SEED_DEPLOY_ENABLED` to equal `true`. Leave it disabled until the old MCRL Seed
 workflow is disabled and the production cutover is explicitly approved. It uses
 the existing deployment key through the `SEED_CONVEX_DEPLOY_KEY` repository secret.
 
-The intended repository is `MC-Ranked-Leagues/Seed-Manager`; the ownership transfer
-is a separate migration step. This checkout continues the original
-`NotAva1ble/seed-manager` Git history.
+This repository continues the original `NotAva1ble/seed-manager` Git history.

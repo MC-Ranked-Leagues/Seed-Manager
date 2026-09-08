@@ -28,7 +28,11 @@ export default defineConfig([
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        project: [
+          "./tsconfig.json",
+          "./tsconfig.node.json",
+          "./convex/tsconfig.json",
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -48,7 +52,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["web/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
     languageOptions: {
       globals: globals.browser,
@@ -65,7 +69,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["web/src/components/ui/**/*.{ts,tsx}"],
+    files: ["src/components/ui/**/*.{ts,tsx}"],
     rules: {
       "react-refresh/only-export-components": "off",
     },
