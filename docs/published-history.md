@@ -25,7 +25,7 @@ The endpoint caches current-week responses for 30 seconds and historical respons
 for 86400 seconds.
 
 The producer schema is `convex/lib/seedHistoryResponse.ts`. League's consumer
-schema is `domains/league/web/src/lib/seedHistoryResponse.ts` in MCRL. Both were
+schema is `apps/web/src/lib/seedHistoryResponse.ts` in MCRL. Both were
 copied unchanged from `@mcrl/contracts/seed-history` at MCRL commit `29cd375`.
 
 Keep existing fields and meanings compatible with deployed consumers. Adding an

@@ -19,7 +19,7 @@ export default defineConfig({
           clearMocks: true,
           restoreMocks: true,
           name: "frontend",
-          include: ["web/src/**/*.test.{ts,tsx,js,jsx}"],
+          include: ["src/**/*.test.{ts,tsx,js,jsx}"],
           exclude: [...configDefaults.exclude, "convex/**"],
           environment: "node",
         },

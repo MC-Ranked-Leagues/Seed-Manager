@@ -10,5 +10,5 @@ export default {
   printWidth: 80,
   tailwindFunctions: ["cn", "cva"],
   plugins: [tailwindcss],
-  tailwindStylesheet: "./web/src/index.css",
+  tailwindStylesheet: "./src/index.css",
 };
