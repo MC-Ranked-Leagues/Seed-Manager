@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 
 type JsonValue =
   | string
@@ -13,7 +13,7 @@ type JsonRecord = Record<string, JsonValue | undefined>;
 export function jsonResponse(
   body: unknown,
   status = 200,
-  headers?: HeadersInit,
+  headers?: HeadersInit
 ): Response {
   const responseHeaders = new Headers({
     "Content-Type": "application/json",
@@ -32,7 +32,7 @@ export function jsonResponse(
 export function jsonError(
   message: string,
   status: number,
-  details?: JsonRecord,
+  details?: JsonRecord
 ): Response {
   console.error(`[HTTP ${status}] ${message}`, details ?? {});
   return jsonResponse({ error: message, status, ...details }, status);
@@ -43,7 +43,7 @@ export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const key = await crypto.subtle.generateKey(
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   );
   const [aHmac, bHmac] = await Promise.all([
     crypto.subtle.sign("HMAC", key, encoder.encode(a)),
@@ -52,13 +52,15 @@ export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const aBytes = new Uint8Array(aHmac);
   const bBytes = new Uint8Array(bHmac);
   let diff = 0;
-  for (let i = 0; i < aBytes.length; i += 1) diff |= aBytes[i] ^ bBytes[i];
+  for (let i = 0; i < aBytes.length; i += 1) {
+    diff |= aBytes[i]! ^ bBytes[i]!;
+  }
   return diff === 0;
 }
 
 export async function validateApiKey(
   request: Request,
-  envVar: "READ_API_KEY_SEEDS" | "WRITE_API_KEY_SEEDS",
+  envVar: "READ_API_KEY_SEEDS" | "WRITE_API_KEY_SEEDS"
 ): Promise<Response | null> {
   const providedKey = request.headers.get("x-api-key");
   const expectedKey = process.env[envVar];
@@ -78,7 +80,7 @@ export async function validateApiKey(
 
 export async function extractRequestBody<T>(
   request: Request,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T>
 ): Promise<{ data: T } | { errorResponse: Response }> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
@@ -86,7 +88,7 @@ export async function extractRequestBody<T>(
       errorResponse: jsonError(
         "Invalid Content-Type. Expected application/json.",
         415,
-        { received: contentType || "(none)" },
+        { received: contentType || "(none)" }
       ),
     };
   }
@@ -117,7 +119,7 @@ export async function extractRequestBody<T>(
 
 export function extractQueryParams<T>(
   request: Request,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T>
 ): { data: T } | { errorResponse: Response } {
   const url = new URL(request.url);
   const raw: Record<string, string> = {};
@@ -146,8 +148,8 @@ export function shuffle<T>(values: readonly T[]) {
   for (let i = shuffledValues.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffledValues[i], shuffledValues[j]] = [
-      shuffledValues[j],
-      shuffledValues[i],
+      shuffledValues[j]!,
+      shuffledValues[i]!,
     ];
   }
 

@@ -50,13 +50,13 @@ describe("jungle pyramid seed uploads", () => {
           rng: "103",
           type: "JUNGLE_PYRAMID",
         },
-      }),
+      })
     ).rejects.toThrow("Jungle pyramid seed uploads are not currently enabled");
 
     await expect(
       uploader.mutation(api.settings.setJunglePyramidSeedsEnabled, {
         enabled: true,
-      }),
+      })
     ).rejects.toThrow("Admin access required");
 
     await admin.mutation(api.settings.setJunglePyramidSeedsEnabled, {
@@ -73,7 +73,7 @@ describe("jungle pyramid seed uploads", () => {
           rng: "203",
           type: "JUNGLE_PYRAMID",
         },
-      }),
+      })
     ).resolves.toEqual(expect.any(String));
 
     await admin.mutation(api.settings.setJunglePyramidSeedsEnabled, {
@@ -90,7 +90,7 @@ describe("jungle pyramid seed uploads", () => {
           rng: "303",
           type: "JUNGLE_PYRAMID",
         },
-      }),
+      })
     ).rejects.toThrow("Jungle pyramid seed uploads are not currently enabled");
   });
 });

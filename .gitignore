@@ -1,5 +1,19 @@
+# Dependencies and generated output
+node_modules/
+dist/
+dist-ssr/
+.astro/
+coverage/
+.pnpm-store/
+
+# Environment variables and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,15 +21,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Editor and operating-system artifacts
+**/.vscode/*
+!**/.vscode/extensions.json
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,8 +32,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Private working documents and backups
 backups/
-
-*.plan.md
+scripts/data/
 *.idea.md
-seeds.jsonl
+*.report.md
+*.report.html

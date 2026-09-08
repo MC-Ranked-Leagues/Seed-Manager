@@ -6,6 +6,8 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          clearMocks: true,
+          restoreMocks: true,
           name: "convex",
           include: ["convex/**/*.test.{ts,js}"],
           environment: "edge-runtime",
@@ -14,10 +16,12 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          clearMocks: true,
+          restoreMocks: true,
           name: "frontend",
-          include: ["src/**/*.test.{ts,tsx,js,jsx}"],
+          include: ["web/src/**/*.test.{ts,tsx,js,jsx}"],
           exclude: [...configDefaults.exclude, "convex/**"],
-          environment: "jsdom",
+          environment: "node",
         },
       },
     ],

@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { ConvexError } from "convex/values";
+import { SeedHistoryResponseSchema } from "./lib/seedHistoryResponse";
 import { auth } from "./auth";
 import { httpAction } from "./_generated/server";
 import {
@@ -9,7 +10,7 @@ import {
   jsonResponse,
   validateApiKey,
 } from "./lib/utils";
-import z from "zod";
+import type z from "zod";
 import { internal } from "./_generated/api";
 import {
   DiscordUserInfoQuerySchema,
@@ -71,7 +72,7 @@ async function runReadRoute<T extends Record<string, string>>(args: {
     ? extractQueryParams(args.request, args.schema)
     : {
         data: Object.fromEntries(
-          new URL(args.request.url).searchParams.entries(),
+          new URL(args.request.url).searchParams.entries()
         ) as T,
       };
 
@@ -106,14 +107,14 @@ http.route({
     try {
       const result = await ctx.runQuery(
         internal.seeds.listPublishedHistory,
-        payloadResult.data,
+        payloadResult.data
       );
 
       if (result.ok === false) {
         return jsonError(result.error, result.status);
       }
 
-      return jsonResponse(result.seeds, 200, {
+      return jsonResponse(SeedHistoryResponseSchema.parse(result.seeds), 200, {
         "Cache-Control": result.isCurrentWeek
           ? "public, max-age=30"
           : "public, max-age=86400",
@@ -135,7 +136,7 @@ http.route({
     try {
       const result = await ctx.runQuery(
         internal.seeds.listCurrentWeekSeedOrder,
-        payloadResult.data,
+        payloadResult.data
       );
 
       if (result.ok === false) {
@@ -159,14 +160,14 @@ http.route({
     runReadRoute({
       request,
       routeLabel: "GET /api/users/discord",
-      run: async (payload) => {
+      run: async () => {
         const result = await ctx.runQuery(
           internal.users.listActiveUsersAPI,
-          payload as any,
+          {}
         );
         return { ok: true, result };
       },
-    }),
+    })
   ),
 });
 
@@ -181,7 +182,7 @@ http.route({
       run: async ({ discordId }) => {
         const result = await ctx.runQuery(
           internal.users.getDiscordUserInfoAPI,
-          { discordId },
+          { discordId }
         );
 
         if (!result) {
@@ -194,7 +195,7 @@ http.route({
 
         return { ok: true, result };
       },
-    }),
+    })
   ),
 });
 
@@ -208,7 +209,7 @@ http.route({
       routeLabel: "POST /api/users/discord/roles/update",
       run: (payload) =>
         ctx.runMutation(internal.users.updateDiscordAccess, payload),
-    }),
+    })
   ),
 });
 
@@ -222,7 +223,7 @@ http.route({
       routeLabel: "POST /api/users/discord/activate",
       run: (payload) =>
         ctx.runMutation(internal.users.activateUserByDiscordIdAPI, payload),
-    }),
+    })
   ),
 });
 
@@ -236,7 +237,7 @@ http.route({
       routeLabel: "POST /api/users/discord/deactivate",
       run: (payload) =>
         ctx.runMutation(internal.users.deactivateUserByDiscordIdAPI, payload),
-    }),
+    })
   ),
 });
 

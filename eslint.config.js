@@ -1,83 +1,71 @@
-import { defineConfig } from "eslint/config";
+import convexPlugin from "@convex-dev/eslint-plugin";
 import js from "@eslint/js";
-import globals from "globals";
+import { defineConfig, globalIgnores } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import globals from "globals";
 import tseslint from "typescript-eslint";
-import convexPlugin from "@convex-dev/eslint-plugin";
 
 export default defineConfig([
+  globalIgnores([
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/dist-ssr/**",
+    "**/.astro/**",
+    "**/coverage/**",
+    "**/convex/_generated/**",
+    "backups/**",
+  ]),
   {
-    ignores: [
-      "dist",
-      "eslint.config.js",
-      "convex/_generated",
-      "postcss.config.js",
-      "tailwind.config.js",
-      "vite.config.ts",
-    ],
+    files: ["**/*.{js,mjs,cjs,ts,tsx}"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: "latest",
+    },
   },
   {
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
     files: ["**/*.{ts,tsx}"],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
       parserOptions: {
-        project: [
-          "./tsconfig.node.json",
-          "./tsconfig.app.json",
-          "./convex/tsconfig.json",
-        ],
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
-    },
-    plugins: {
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
-      // All of these overrides ease getting into
-      // TypeScript, and can be removed for stricter
-      // linting down the line.
-
-      // Only warn on unused variables, and ignore variables starting with `_`
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
       ],
-
-      // Allow escaping the compiler
-      "@typescript-eslint/ban-ts-comment": "error",
-
-      // Allow explicit `any`s
-      "@typescript-eslint/no-explicit-any": "off",
-
-      // START: Allow implicit `any`s
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      // END: Allow implicit `any`s
-
-      // Allow async functions without await
-      // for consistency (esp. Convex `handler`s)
       "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
     },
   },
   {
-    files: ["src/components/ui/**/*.{ts,tsx}"],
+    files: ["web/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
+    files: [
+      "**/*.config.{js,mjs,cjs,ts}",
+      "**/scripts/**/*.{js,mjs,cjs,ts}",
+      "eslint.config.js",
+    ],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["web/src/components/ui/**/*.{ts,tsx}"],
     rules: {
       "react-refresh/only-export-components": "off",
     },
