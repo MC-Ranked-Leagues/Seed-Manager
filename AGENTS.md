@@ -1,31 +1,34 @@
-ALWAYS USE BUN WHEN POSSIBLE.
+# Repository instructions
 
-When prompted to brainstorm, use short, concise and meaningful ideas, rather than fully planned responses. Ask questions, and ecourage collaboration. Keep the response relatively short.
-
-Never commit without user approval.
-
-For project overview and usage, read `seed-manager-routing.plan.md` and `seed-manager-v1.plan.md`.
-
-For new actions, ask me if I want to log it.
+- Use Bun for package management and commands.
+- Do not commit without explicit user approval.
+- Do not run commands or make changes against production environments.
+- Answer questions without treating them as permission to make changes.
+- Keep brainstorming concise and collaborative.
 
 ## Code quality
 
-Do not try to create components and abstract function that are only used once.
+- Read `CONTEXT.md` before changing Seed behavior or terminology.
+- Read `docs/seed-manager-routing.plan.md` and `docs/seed-manager-v1.plan.md`
+  before changing application workflows.
+- Before adding a logging action, ask whether it should be logged.
+- Reuse existing UI where suitable. Avoid abstractions used only once.
+- Prefer one React component per file; keep closely related helpers together
+  when that is clearer. Put reusable helpers in the relevant `lib` directory.
+- Use `@/*` for `web/src` imports and `@/convex/*` for this app's backend.
+- Keep backend implementations private. External callers use HTTP interfaces.
+- Seed owns the published-history interface documented in
+  `docs/published-history.md`. Preserve compatibility with League's local schema.
 
-Prefer using one file per react component, unless it makes sense not to (for example helper components). For helper functions however, try and put them in the lib folder. Do not put everything into one file.
+## Convex
 
-When writing ui, check for components to reuse. Also, search the codebase for similar ui that is hard coded. If yes, let me know to extract them.
+- Read `convex/_generated/ai/guidelines.md` before changing Convex code.
+- Mutations and internal mutations signal failures by throwing `ConvexError`.
+  Returning a failure value commits earlier writes.
 
-## Testing
+## Verification
 
-For most testing, prefer simple typecheck over writing browser and custom tests for most changes. Only when changing multiple features, files and functionallity, when writing complicated code and when rewriting core app features, consider more testing options.
-
-<!-- convex-ai-start -->
-
-This project uses [Convex](https://convex.dev) as its backend.
-
-When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
-
-In Convex mutations and internal mutations, always signal failures by throwing a `ConvexError`. Never return an error object or error status from a mutation handler: returning counts as a successful transaction and will not roll back earlier writes.
-
-<!-- convex-ai-end -->
+- Run typecheck frequently, using the smallest affected script in `package.json`.
+- Prefer existing tests and typecheck over custom or browser tests for small edits.
+- Run broader existing tests and build checks for migration or core changes.
+- Run lint at the end and report remaining errors.
