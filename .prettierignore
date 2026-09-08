@@ -21,6 +21,3 @@
 **/*.woff2
 **/*.report.html
 **/seeds.jsonl
-
-# Preserve vendored skills from the original repository.
-.agents/skills/**
