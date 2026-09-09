@@ -22,6 +22,7 @@ import type * as lib_seedFilter_client from "../lib/seedFilter/client.js";
 import type * as lib_seedFilter_parameters from "../lib/seedFilter/parameters.js";
 import type * as lib_seedFilter_schemas from "../lib/seedFilter/schemas.js";
 import type * as lib_seedFilter_validators from "../lib/seedFilter/validators.js";
+import type * as lib_seedHistoryResponse from "../lib/seedHistoryResponse.js";
 import type * as lib_seedOrder from "../lib/seedOrder.js";
 import type * as lib_settings from "../lib/settings.js";
 import type * as lib_utils from "../lib/utils.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   "lib/seedFilter/parameters": typeof lib_seedFilter_parameters;
   "lib/seedFilter/schemas": typeof lib_seedFilter_schemas;
   "lib/seedFilter/validators": typeof lib_seedFilter_validators;
+  "lib/seedHistoryResponse": typeof lib_seedHistoryResponse;
   "lib/seedOrder": typeof lib_seedOrder;
   "lib/settings": typeof lib_settings;
   "lib/utils": typeof lib_utils;
