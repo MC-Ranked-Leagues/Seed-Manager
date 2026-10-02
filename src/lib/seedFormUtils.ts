@@ -1,6 +1,9 @@
 import type { KeyboardEvent } from "react";
+import type z from "zod";
 import type { Id } from "@/convex/_generated/dataModel";
-import type { SeedType } from "./consts";
+import { SEED_TYPES, type SeedType } from "@/lib/consts";
+import { getErrorMessage } from "@/lib/errors";
+import { validateManualSeedForm } from "@/lib/validators";
 
 export const MAX_SEED_IMPORT_COUNT = 500;
 
@@ -33,6 +36,8 @@ export type SeedUploadInput = {
 };
 
 export type SeedJsonUploadInput = Omit<SeedUploadInput, "leagueId">;
+
+export type SeedFilterSet = z.infer<typeof validateManualSeedForm>[];
 
 export function sanitizeSeedNumber(value: string) {
   const sign = value.startsWith("-") ? "-" : "";
@@ -133,6 +138,67 @@ export function getManualSeedFormErrors(
   }
 
   return errors;
+}
+
+export async function readSeedFilterSet(
+  leagueId: Id<"leagues">,
+  uploadSeedTypes: SeedType[]
+): Promise<{ error: string } | { seeds: SeedFilterSet }> {
+  let text: string;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    return { error: "Allow clipboard access and try again." };
+  }
+
+  const parsedSeeds = text
+    .trim()
+    .split(/\r?\n\s*\r?\n/)
+    .map((block) => {
+      const lines = block.trim().split(/\r?\n/);
+      const typeLine = lines.find((line) => /^\s*Type:/.test(line));
+      const seeds = parseMinecraftSeedClipboard(
+        lines.filter((line) => line !== typeLine).join("\n")
+      );
+      const typeLabel = typeLine?.replace(/^\s*Type:\s*/, "").trim();
+      const type = uploadSeedTypes.find(
+        (seedType) => SEED_TYPES[seedType] === typeLabel
+      );
+      if (!seeds || !type) return null;
+
+      const validatedData = validateManualSeedForm.safeParse({
+        ...seeds,
+        type,
+        leagueId,
+      });
+      return validatedData.success ? validatedData.data : null;
+    });
+  if (!parsedSeeds.every((seed) => seed !== null)) {
+    return {
+      error:
+        'Use "copy set for seed manager" on a seed filter league set, then try again.',
+    };
+  }
+
+  return { seeds: parsedSeeds };
+}
+
+export async function importSeedFilterSet(
+  seeds: SeedFilterSet,
+  importSeed: (seed: SeedFilterSet[number]) => Promise<unknown>
+): Promise<{ added: number; failures: string[] }> {
+  const failures: string[] = [];
+  for (const [index, seed] of seeds.entries()) {
+    try {
+      await importSeed(seed);
+    } catch (error) {
+      failures.push(
+        `Seed ${index + 1}: ${getErrorMessage(error, "Could not add this seed")}`
+      );
+    }
+  }
+
+  return { added: seeds.length - failures.length, failures };
 }
 
 export function isSeedFormField(value: unknown): value is keyof SeedFormValues {
