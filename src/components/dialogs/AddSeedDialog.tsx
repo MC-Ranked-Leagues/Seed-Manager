@@ -1,4 +1,4 @@
-import { AlertCircleIcon, XIcon } from "lucide-react";
+import { AlertCircleIcon, ClipboardPasteIcon, XIcon } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,6 +19,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import { getUploadSeedTypes, SEED_TYPES } from "@/lib/consts";
 import { getErrorMessage } from "@/lib/errors";
 import {
   getManualSeedFormErrors,
+  importSeedFilterSet,
   parseMinecraftSeedClipboard,
   preventNonNumericSeedInput,
   sanitizeSeedNumber,
@@ -77,6 +79,8 @@ function AddSeedDialog({
     leagueId: defaultLeagueId,
   }));
   const [manualErrors, setManualErrors] = useState<SeedFormErrors>({});
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const selectedManualLeague = leagues.find(
     (league) => league._id === manualValues.leagueId
   );
@@ -97,6 +101,35 @@ function AddSeedDialog({
       leagueId: defaultLeagueId,
     });
     setManualErrors({});
+    setImportError(null);
+  };
+
+  const importSetFromSeedFilter = async () => {
+    if (!manualValues.leagueId) {
+      setImportError("Choose a league first.");
+      return;
+    }
+
+    setImporting(true);
+    setImportError(null);
+    const result = await importSeedFilterSet(
+      manualValues.leagueId,
+      uploadSeedTypes,
+      (seed) => importSeeds({ seed })
+    );
+    setImporting(false);
+
+    if ("error" in result) {
+      setImportError(result.error);
+      return;
+    }
+    if (result.failures.length === 0) {
+      closeDialog();
+      return;
+    }
+    setImportError(
+      `${result.added} of ${result.added + result.failures.length} added.\n${result.failures.join("\n")}`
+    );
   };
 
   const closeDialog = () => {
@@ -284,8 +317,27 @@ function AddSeedDialog({
         {manualErrors.form && (
           <ErrorAlert title="Seed not saved" message={manualErrors.form} />
         )}
+        {importError && (
+          <ErrorAlert title="Seed filter import" message={importError} />
+        )}
 
         <DialogFooter>
+          <Button
+            className="sm:mr-auto"
+            disabled={importing}
+            onClick={() => {
+              void importSetFromSeedFilter();
+            }}
+            type="button"
+            variant="outline"
+          >
+            {importing ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <ClipboardPasteIcon data-icon="inline-start" />
+            )}
+            Import set from seed filter
+          </Button>
           <DialogClose
             onClick={closeDialog}
             render={<Button variant="outline" />}

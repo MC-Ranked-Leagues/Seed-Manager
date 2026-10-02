@@ -1,6 +1,9 @@
 import type { KeyboardEvent } from "react";
+import type z from "zod";
 import type { Id } from "@/convex/_generated/dataModel";
-import type { SeedType } from "./consts";
+import { SEED_TYPES, type SeedType } from "./consts";
+import { getErrorMessage } from "./errors";
+import { validateManualSeedForm } from "./validators";
 
 export const MAX_SEED_IMPORT_COUNT = 500;
 
@@ -133,6 +136,62 @@ export function getManualSeedFormErrors(
   }
 
   return errors;
+}
+
+export async function importSeedFilterSet(
+  leagueId: Id<"leagues">,
+  uploadSeedTypes: SeedType[],
+  importSeed: (seed: z.infer<typeof validateManualSeedForm>) => Promise<unknown>
+): Promise<{ error: string } | { added: number; failures: string[] }> {
+  let text: string;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    return { error: "Allow clipboard access and try again." };
+  }
+
+  const parsedSeeds = text
+    .trim()
+    .split(/\r?\n\s*\r?\n/)
+    .map((block) => {
+      const lines = block.trim().split(/\r?\n/);
+      const typeLine = lines.find((line) => /^\s*Type:/.test(line));
+      const seeds = parseMinecraftSeedClipboard(
+        lines.filter((line) => line !== typeLine).join("\n")
+      );
+      const typeLabel = typeLine?.replace(/^\s*Type:\s*/, "").trim();
+      const type = uploadSeedTypes.find(
+        (seedType) => SEED_TYPES[seedType] === typeLabel
+      );
+      return seeds && type ? { ...seeds, type } : null;
+    });
+  if (parsedSeeds.some((seed) => !seed)) {
+    return {
+      error:
+        'Use "copy set for seed manager" on a seed filter league set, then try again.',
+    };
+  }
+
+  const failures: string[] = [];
+  for (const [index, parsedSeed] of parsedSeeds.entries()) {
+    const validatedData = validateManualSeedForm.safeParse({
+      ...parsedSeed,
+      leagueId,
+    });
+    if (!validatedData.success) {
+      failures.push(`Seed ${index + 1}: invalid seed values`);
+      continue;
+    }
+    try {
+      await importSeed(validatedData.data);
+    } catch (error) {
+      failures.push(
+        `Seed ${index + 1}: ${getErrorMessage(error, "Could not add this seed")}`
+      );
+    }
+  }
+
+  return { added: parsedSeeds.length - failures.length, failures };
 }
 
 export function isSeedFormField(value: unknown): value is keyof SeedFormValues {
