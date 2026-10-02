@@ -1,9 +1,9 @@
 import type { KeyboardEvent } from "react";
 import type z from "zod";
 import type { Id } from "@/convex/_generated/dataModel";
-import { SEED_TYPES, type SeedType } from "./consts";
-import { getErrorMessage } from "./errors";
-import { validateManualSeedForm } from "./validators";
+import { SEED_TYPES, type SeedType } from "@/lib/consts";
+import { getErrorMessage } from "@/lib/errors";
+import { validateManualSeedForm } from "@/lib/validators";
 
 export const MAX_SEED_IMPORT_COUNT = 500;
 
@@ -36,6 +36,8 @@ export type SeedUploadInput = {
 };
 
 export type SeedJsonUploadInput = Omit<SeedUploadInput, "leagueId">;
+
+export type SeedFilterSet = z.infer<typeof validateManualSeedForm>[];
 
 export function sanitizeSeedNumber(value: string) {
   const sign = value.startsWith("-") ? "-" : "";
@@ -138,11 +140,10 @@ export function getManualSeedFormErrors(
   return errors;
 }
 
-export async function importSeedFilterSet(
+export async function readSeedFilterSet(
   leagueId: Id<"leagues">,
-  uploadSeedTypes: SeedType[],
-  importSeed: (seed: z.infer<typeof validateManualSeedForm>) => Promise<unknown>
-): Promise<{ error: string } | { added: number; failures: string[] }> {
+  uploadSeedTypes: SeedType[]
+): Promise<{ error: string } | { seeds: SeedFilterSet }> {
   let text: string;
   try {
     text = await navigator.clipboard.readText();
@@ -163,27 +164,33 @@ export async function importSeedFilterSet(
       const type = uploadSeedTypes.find(
         (seedType) => SEED_TYPES[seedType] === typeLabel
       );
-      return seeds && type ? { ...seeds, type } : null;
+      if (!seeds || !type) return null;
+
+      const validatedData = validateManualSeedForm.safeParse({
+        ...seeds,
+        type,
+        leagueId,
+      });
+      return validatedData.success ? validatedData.data : null;
     });
-  if (parsedSeeds.some((seed) => !seed)) {
+  if (!parsedSeeds.every((seed) => seed !== null)) {
     return {
       error:
         'Use "copy set for seed manager" on a seed filter league set, then try again.',
     };
   }
 
+  return { seeds: parsedSeeds };
+}
+
+export async function importSeedFilterSet(
+  seeds: SeedFilterSet,
+  importSeed: (seed: SeedFilterSet[number]) => Promise<unknown>
+): Promise<{ added: number; failures: string[] }> {
   const failures: string[] = [];
-  for (const [index, parsedSeed] of parsedSeeds.entries()) {
-    const validatedData = validateManualSeedForm.safeParse({
-      ...parsedSeed,
-      leagueId,
-    });
-    if (!validatedData.success) {
-      failures.push(`Seed ${index + 1}: invalid seed values`);
-      continue;
-    }
+  for (const [index, seed] of seeds.entries()) {
     try {
-      await importSeed(validatedData.data);
+      await importSeed(seed);
     } catch (error) {
       failures.push(
         `Seed ${index + 1}: ${getErrorMessage(error, "Could not add this seed")}`
@@ -191,7 +198,7 @@ export async function importSeedFilterSet(
     }
   }
 
-  return { added: parsedSeeds.length - failures.length, failures };
+  return { added: seeds.length - failures.length, failures };
 }
 
 export function isSeedFormField(value: unknown): value is keyof SeedFormValues {

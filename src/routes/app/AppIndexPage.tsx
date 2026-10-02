@@ -5,12 +5,8 @@ import { api } from "@/convex/_generated/api";
 import type { SeedFormErrors, SeedFormValues } from "@/lib/seedFormUtils";
 import {
   getManualSeedFormErrors,
-  importSeedFilterSet,
   sanitizeSeedNumber,
 } from "@/lib/seedFormUtils";
-import { ClipboardPasteIcon } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ErrorAlert,
@@ -63,9 +59,6 @@ export function AppIndexPage() {
     leagueId: null,
   }));
   const [manualErrors, setManualErrors] = useState<SeedFormErrors>({});
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importedCount, setImportedCount] = useState<number | null>(null);
-  const [importing, setImporting] = useState(false);
 
   const user = useQuery(api.users.currentUser);
   const settings = useQuery(api.settings.current);
@@ -153,36 +146,6 @@ export function AppIndexPage() {
         form: getErrorMessage(error, "Could not add this seed"),
       });
     }
-  };
-
-  const importSetFromSeedFilter = async () => {
-    setImportedCount(null);
-    if (!manualValues.leagueId) {
-      setImportError("Choose a league first.");
-      return;
-    }
-
-    setImporting(true);
-    setImportError(null);
-    const result = await importSeedFilterSet(
-      manualValues.leagueId,
-      uploadSeedTypes,
-      (seed) => importSeeds({ seed })
-    );
-    setImporting(false);
-
-    if ("error" in result) {
-      setImportError(result.error);
-      return;
-    }
-    if (result.failures.length === 0) {
-      resetForm();
-      setImportedCount(result.added);
-      return;
-    }
-    setImportError(
-      `${result.added} of ${result.added + result.failures.length} added.\n${result.failures.join("\n")}`
-    );
   };
 
   return (
@@ -317,37 +280,8 @@ export function AppIndexPage() {
             {manualErrors.form && (
               <ErrorAlert title="Seed not saved" message={manualErrors.form} />
             )}
-            {importError && (
-              <ErrorAlert title="Seed filter import" message={importError} />
-            )}
-            {importedCount !== null && (
-              <Alert>
-                <ClipboardPasteIcon />
-                <AlertTitle>Set imported</AlertTitle>
-                <AlertDescription>
-                  {importedCount} {importedCount === 1 ? "seed" : "seeds"} added
-                  from the seed filter.
-                </AlertDescription>
-              </Alert>
-            )}
           </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button
-              className="mr-auto"
-              disabled={importing}
-              onClick={() => {
-                void importSetFromSeedFilter();
-              }}
-              type="button"
-              variant="outline"
-            >
-              {importing ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <ClipboardPasteIcon data-icon="inline-start" />
-              )}
-              Import set from seed filter
-            </Button>
+          <CardFooter className="flex justify-end">
             <Button type="submit">Add seed</Button>
           </CardFooter>
         </form>
