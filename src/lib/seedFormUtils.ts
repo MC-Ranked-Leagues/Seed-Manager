@@ -37,7 +37,9 @@ export type SeedUploadInput = {
 
 export type SeedJsonUploadInput = Omit<SeedUploadInput, "leagueId">;
 
-export type SeedFilterSet = z.infer<typeof validateManualSeedForm>[];
+export type SeedFilterSet = (z.infer<typeof validateManualSeedForm> & {
+  notes: string[];
+})[];
 
 export function sanitizeSeedNumber(value: string) {
   const sign = value.startsWith("-") ? "-" : "";
@@ -157,8 +159,11 @@ export async function readSeedFilterSet(
     .map((block) => {
       const lines = block.trim().split(/\r?\n/);
       const typeLine = lines.find((line) => /^\s*Type:/.test(line));
+      const noteLines = lines.filter((line) => /^\s*Note:/.test(line));
       const seeds = parseMinecraftSeedClipboard(
-        lines.filter((line) => line !== typeLine).join("\n")
+        lines
+          .filter((line) => line !== typeLine && !noteLines.includes(line))
+          .join("\n")
       );
       const typeLabel = typeLine?.replace(/^\s*Type:\s*/, "").trim();
       const type = uploadSeedTypes.find(
@@ -171,7 +176,12 @@ export async function readSeedFilterSet(
         type,
         leagueId,
       });
-      return validatedData.success ? validatedData.data : null;
+      return validatedData.success
+        ? {
+            ...validatedData.data,
+            notes: noteLines.map((line) => line.replace(/^\s*Note:\s*/, "")),
+          }
+        : null;
     });
   if (!parsedSeeds.every((seed) => seed !== null)) {
     return {
@@ -185,20 +195,36 @@ export async function readSeedFilterSet(
 
 export async function importSeedFilterSet(
   seeds: SeedFilterSet,
-  importSeed: (seed: SeedFilterSet[number]) => Promise<unknown>
+  importSeed: (
+    seed: Omit<SeedFilterSet[number], "notes">
+  ) => Promise<Id<"seeds">>,
+  addNote: (seedId: Id<"seeds">, body: string) => Promise<unknown>
 ): Promise<{ added: number; failures: string[] }> {
   const failures: string[] = [];
-  for (const [index, seed] of seeds.entries()) {
+  let added = 0;
+  for (const [index, { notes, ...seed }] of seeds.entries()) {
+    let seedId: Id<"seeds">;
     try {
-      await importSeed(seed);
+      seedId = await importSeed(seed);
+      added++;
     } catch (error) {
       failures.push(
         `Seed ${index + 1}: ${getErrorMessage(error, "Could not add this seed")}`
       );
+      continue;
+    }
+    for (const note of notes) {
+      try {
+        await addNote(seedId, note);
+      } catch (error) {
+        failures.push(
+          `Seed ${index + 1} note: ${getErrorMessage(error, "Could not add this note")}`
+        );
+      }
     }
   }
 
-  return { added: seeds.length - failures.length, failures };
+  return { added, failures };
 }
 
 export function isSeedFormField(value: unknown): value is keyof SeedFormValues {
