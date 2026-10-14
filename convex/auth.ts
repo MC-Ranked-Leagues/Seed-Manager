@@ -11,6 +11,7 @@ import type { MutationCtx } from "./_generated/server";
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Discord({
+      issuer: "https://discord.com",
       authorization: "https://discord.com/oauth2/authorize?scope=identify",
       profile(profile: DiscordProfile) {
         const name = profile.username;

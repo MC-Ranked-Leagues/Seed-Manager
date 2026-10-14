@@ -29,6 +29,7 @@ export function ImportSeedFilterSetButton({
   league: Doc<"leagues">;
 }) {
   const importSeeds = useMutation(api.seeds.importSeeds);
+  const createComment = useMutation(api.comments.create);
   const settings = useQuery(api.settings.current);
   const [pendingSeeds, setPendingSeeds] = useState<SeedFilterSet | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,8 +63,10 @@ export function ImportSeedFilterSetButton({
 
     setBusy(true);
     try {
-      const imported = await importSeedFilterSet(pendingSeeds, (seed) =>
-        importSeeds({ seed })
+      const imported = await importSeedFilterSet(
+        pendingSeeds,
+        (seed) => importSeeds({ seed }),
+        (seedId, body) => createComment({ seedId, body })
       );
       if (imported.failures.length === 0) {
         toast.success(
