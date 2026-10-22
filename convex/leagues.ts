@@ -183,3 +183,48 @@ export const deleteLeague = mutation({
     });
   },
 });
+
+const MAX_PRESET_TIME_LIMIT = 24 * 60 * 60;
+
+export const updateLeaguePreset = mutation({
+  args: {
+    leagueId: v.id("leagues"),
+    presetTimeLimit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    const league = await ctx.db.get("leagues", args.leagueId);
+
+    if (!league) {
+      throw new ConvexError({
+        code: "LEAGUE_NOT_EXIST",
+        message: "The requested league id does not exist",
+      });
+    }
+
+    if (
+      !Number.isSafeInteger(args.presetTimeLimit) ||
+      args.presetTimeLimit < 0 ||
+      args.presetTimeLimit > MAX_PRESET_TIME_LIMIT
+    ) {
+      throw new ConvexError({
+        code: "INVALID_PRESET",
+        message: "Time limit must be between 0 and 24 hours",
+      });
+    }
+
+    await ctx.db.patch("leagues", league._id, {
+      presetTimeLimit: args.presetTimeLimit,
+    });
+
+    await writeLog(ctx, {
+      eventType: "league.updated",
+      actor: admin,
+      actorType: "admin",
+      targetType: "league",
+      targetId: league._id,
+      targetLabel: league.leagueName,
+      summary: `Set the preset time limit for ${league.leagueName} to ${args.presetTimeLimit / 60} minutes.`,
+    });
+  },
+});

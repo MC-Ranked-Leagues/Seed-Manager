@@ -85,6 +85,56 @@ export const setJunglePyramidSeedsEnabled = mutation({
   },
 });
 
+const MAX_PRESET_LENGTH = 20000;
+const MAX_PRESET_NAME_FORMAT_LENGTH = 100;
+
+export const updateBasePreset = mutation({
+  args: {
+    preset: v.string(),
+    presetNameFormat: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    const settings = await requireSettings(ctx);
+
+    let preset: unknown;
+    try {
+      preset = JSON.parse(args.preset);
+    } catch {
+      preset = null;
+    }
+
+    if (
+      args.preset.length > MAX_PRESET_LENGTH ||
+      args.presetNameFormat.length > MAX_PRESET_NAME_FORMAT_LENGTH ||
+      !Array.isArray(
+        (preset as { option?: { flag?: { list?: unknown } } } | null)?.option
+          ?.flag?.list
+      )
+    ) {
+      throw new ConvexError({
+        code: "INVALID_PRESET",
+        message: "Preset must be a valid MCSR Ranked preset",
+      });
+    }
+
+    await ctx.db.patch("settings", settings._id, {
+      basePreset: args.preset,
+      presetNameFormat: args.presetNameFormat,
+    });
+
+    await writeLog(ctx, {
+      eventType: "preset.updated",
+      actor: admin,
+      actorType: "admin",
+      targetType: "settings",
+      targetId: settings._id,
+      targetLabel: "Base preset",
+      summary: "Updated the base room preset.",
+    });
+  },
+});
+
 type AdvanceWeekResult = {
   currentWeekNumber: number;
   expiredCount: number;

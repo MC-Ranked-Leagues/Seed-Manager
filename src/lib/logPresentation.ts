@@ -97,6 +97,10 @@ export const LOG_EVENT_CONFIG = {
     label: "League deleted",
     icon: Trash2,
   },
+  "preset.updated": {
+    label: "Preset updated",
+    icon: Settings2,
+  },
   "testing.paused": {
     label: "Testing paused",
     icon: PauseCircle,

@@ -4,8 +4,9 @@ import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import { AddLeagueDialog } from "@/components/dialogs/AddLeagueDialog";
+import { EditBasePresetDialog } from "@/components/dialogs/EditBasePresetDialog";
 import {
   LeagueTable,
   LeagueTableSkeleton,
@@ -20,6 +21,8 @@ export function AdminLeaguesPage() {
   );
   const isLoading = allLeagues === undefined;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const settings = useQuery(api.settings.current);
+  const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false);
 
   const closeDialog = () => {
     setIsDialogOpen(false);
@@ -38,6 +41,24 @@ export function AdminLeaguesPage() {
           <Badge variant="outline">
             {isLoading ? "Loading" : getLeagueCountLabel(leagues.length)}
           </Badge>
+          <Dialog
+            open={isPresetDialogOpen}
+            onOpenChange={setIsPresetDialogOpen}
+          >
+            <DialogTrigger
+              disabled={settings === undefined}
+              render={<Button variant="outline" />}
+            >
+              <SlidersHorizontal data-icon="inline-start" />
+              Edit base preset
+            </DialogTrigger>
+            {isPresetDialogOpen && settings !== undefined && (
+              <EditBasePresetDialog
+                settings={settings}
+                onClose={() => setIsPresetDialogOpen(false)}
+              />
+            )}
+          </Dialog>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger render={<Button />}>
               <Plus data-icon="inline-start" />

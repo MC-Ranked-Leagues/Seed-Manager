@@ -41,12 +41,15 @@ export default defineSchema({
     leagueName: v.string(), // Like "League 1"
     seedCount: v.number(),
     usedSeedCount: v.number(),
+    presetTimeLimit: v.optional(v.number()), // seconds
   }).index("by_leagueNumber", ["leagueNumber"]),
   settings: defineTable({
     key: v.literal("global"),
     currentWeekNumber: v.number(),
     seedTestingPaused: v.boolean(),
     enableJunglePyramidSeeds: v.optional(v.boolean()),
+    basePreset: v.optional(v.string()), // MCSR Ranked room preset JSON
+    presetNameFormat: v.optional(v.string()),
   }).index("by_key", ["key"]),
   seeds: defineTable({
     seedNumber: v.optional(v.number()),

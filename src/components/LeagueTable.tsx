@@ -17,12 +17,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useMutation } from "convex/react";
-import { Trash, Trophy } from "lucide-react";
+import { SlidersHorizontal, Trash, Trophy } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { type Doc, type Id } from "@/convex/_generated/dataModel";
 import { AlertDialog } from "./ui/alert-dialog";
 import { DeleteAlert } from "./dialogs/DeleteDialog";
+import { EditLeaguePresetDialog } from "./dialogs/EditLeaguePresetDialog";
+import { Dialog } from "./ui/dialog";
 
 export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
   const deleteLeague = useMutation(api.leagues.deleteLeague);
@@ -30,6 +32,7 @@ export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] =
     useState<Id<"leagues"> | null>(null);
+  const [presetLeague, setPresetLeague] = useState<Doc<"leagues"> | null>(null);
 
   const selectedLeague = leagues.find(
     (league) => league._id === selectedLeagueId
@@ -83,6 +86,17 @@ export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
           onDelete={() => void deleteSelectedLeague()}
         />
       </AlertDialog>
+      <Dialog
+        open={presetLeague !== null}
+        onOpenChange={(open) => !open && setPresetLeague(null)}
+      >
+        {presetLeague && (
+          <EditLeaguePresetDialog
+            league={presetLeague}
+            onClose={() => setPresetLeague(null)}
+          />
+        )}
+      </Dialog>
       <Table containerClassName="max-h-[calc(100svh-15rem)]">
         <TableHeader>
           <TableRow>
@@ -117,6 +131,14 @@ export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
                 {league._id}
               </TableCell>
               <TableCell className="flex justify-end gap-1 font-mono">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPresetLeague(league)}
+                >
+                  <SlidersHorizontal />
+                  Edit preset
+                </Button>
                 <Button
                   variant="destructive"
                   size="icon-sm"
