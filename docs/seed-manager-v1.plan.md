@@ -118,6 +118,7 @@ All archive mutations are server-authorized and logged. Enabling the client-side
 - `leagueName`
 - `seedCount`: active non-expired seeds
 - `usedSeedCount`: active non-expired seeds marked used
+- optional `presetTimeLimit`: room preset time limit in seconds
 
 ### `settings`
 
@@ -125,6 +126,7 @@ All archive mutations are server-authorized and logged. Enabling the client-side
 - `currentWeekNumber`
 - `seedTestingPaused`
 - optional experimental seed-type flags
+- optional `basePreset` (MCSR Ranked room preset JSON) and `presetNameFormat`
 
 ### `seeds`
 

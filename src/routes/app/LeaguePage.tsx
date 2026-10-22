@@ -44,6 +44,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import AddSeedDialog from "@/components/dialogs/AddSeedDialog";
 import { ImportSeedFilterSetButton } from "@/routes/app/ImportSeedFilterSetButton";
+import { DownloadPresetsButton } from "@/routes/app/DownloadPresetsButton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -149,6 +150,11 @@ export function LeaguePage() {
           </div>
           {canAddSeedToLeague && league && (
             <div className="flex flex-wrap items-center gap-2">
+              <DownloadPresetsButton
+                key={`presets-${league._id}`}
+                league={league}
+                seeds={seeds ?? []}
+              />
               <ImportSeedFilterSetButton key={league._id} league={league} />
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger render={<Button type="button" size="sm" />}>

@@ -17,6 +17,7 @@ export const logEventTypeValidator = v.union(
   v.literal("league.created"),
   v.literal("league.updated"),
   v.literal("league.deleted"),
+  v.literal("preset.updated"),
   v.literal("testing.paused"),
   v.literal("testing.resumed"),
   v.literal("week.advanced")

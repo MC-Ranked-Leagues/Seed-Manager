@@ -33,7 +33,7 @@ Uploader and host access share the same league routes. Controls are capability-d
 - Normal deletion permanently deletes the seed and comments, compacts league order, updates counters, and records an audit event.
 - Used and expired seeds are corrected or deleted only through the unlocked admin seed archive.
 
-League pages show assigned, non-expired seeds. Used seeds remain on the active-week board, while expired seeds are available through admin history.
+League pages show assigned, non-expired seeds. Used seeds remain on the active-week board, while expired seeds are available through admin history. League pages can download the league's seeds as a zip of MCSR Ranked private room presets (`.rsp`), one per seed in seed order, with the seed type shown to spectators.
 
 ## Admin Routes
 
@@ -43,7 +43,7 @@ League pages show assigned, non-expired seeds. Used seeds remain on the active-w
 - `/app/admin/users/pending` and `:userId` — pending-user activation.
 - `/app/admin/seeds` — league/week archive with session-unlocked modifications.
 - `/app/admin/seeds/:seedId` — admin seed detail placeholder.
-- `/app/admin/leagues` — league management and active counters.
+- `/app/admin/leagues` — league management, active counters, the shared base room preset, and each league's preset time limit.
 - `/app/admin/logs` — searchable administrative audit history.
 
 The admin seed archive can edit seed values, type, and used state; reorder seeds; add used seeds to past weeks; and hard-delete current or historical seeds with their comments. Its session unlock is a client safety mechanism; every mutation remains server-authorized and material changes are logged.
