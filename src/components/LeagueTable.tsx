@@ -21,6 +21,7 @@ import { SlidersHorizontal, Trash, Trophy } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { type Doc, type Id } from "@/convex/_generated/dataModel";
+import { getLeagueTimeLimit } from "@/lib/presets";
 import { AlertDialog } from "./ui/alert-dialog";
 import { DeleteAlert } from "./dialogs/DeleteDialog";
 import { EditLeaguePresetDialog } from "./dialogs/EditLeaguePresetDialog";
@@ -102,6 +103,9 @@ export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
           <TableRow>
             <TableHead className="w-24 border-r">Number</TableHead>
             <TableHead className="border-r">Name</TableHead>
+            <TableHead className="border-r text-left">
+              Preset time limit
+            </TableHead>
             <TableHead className="border-r text-left">Total seeds</TableHead>
             <TableHead className="border-r text-left">Used</TableHead>
             <TableHead className="border-r text-left">Unused</TableHead>
@@ -110,49 +114,68 @@ export function LeagueTable({ leagues }: { leagues: Doc<"leagues">[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {leagues.map((league) => (
-            <TableRow key={league._id}>
-              <TableCell className="border-r">
-                <Badge variant="secondary">League {league.leagueNumber}</Badge>
-              </TableCell>
-              <TableCell className="border-r font-mono font-medium">
-                {league.leagueName}
-              </TableCell>
-              <TableCell className="border-r text-left font-mono tabular-nums">
-                {league.seedCount}
-              </TableCell>
-              <TableCell className="border-r text-left font-mono tabular-nums">
-                {league.usedSeedCount}
-              </TableCell>
-              <TableCell className="border-r text-left font-mono tabular-nums">
-                {league.seedCount - league.usedSeedCount}
-              </TableCell>
-              <TableCell className="truncate border-r font-mono text-muted-foreground">
-                {league._id}
-              </TableCell>
-              <TableCell className="flex justify-end gap-1 font-mono">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPresetLeague(league)}
-                >
-                  <SlidersHorizontal />
-                  Edit preset
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="icon-sm"
-                  aria-label={`Delete ${league.leagueName}`}
-                  onClick={() => {
-                    setSelectedLeagueId(league._id);
-                    setIsAlertOpen(true);
-                  }}
-                >
-                  <Trash />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {leagues.map((league) => {
+            const timeLimit = getLeagueTimeLimit(league);
+            const minutes = Math.floor(timeLimit / 60);
+            const seconds = timeLimit % 60;
+            const timeLimitLabel =
+              timeLimit === 0
+                ? "No limit"
+                : seconds === 0
+                  ? `${minutes} min`
+                  : minutes === 0
+                    ? `${seconds} sec`
+                    : `${minutes} min ${seconds} sec`;
+
+            return (
+              <TableRow key={league._id}>
+                <TableCell className="border-r">
+                  <Badge variant="secondary">
+                    League {league.leagueNumber}
+                  </Badge>
+                </TableCell>
+                <TableCell className="border-r font-mono font-medium">
+                  {league.leagueName}
+                </TableCell>
+                <TableCell className="border-r text-left font-mono font-medium tabular-nums">
+                  {timeLimitLabel}
+                </TableCell>
+                <TableCell className="border-r text-left font-mono tabular-nums">
+                  {league.seedCount}
+                </TableCell>
+                <TableCell className="border-r text-left font-mono tabular-nums">
+                  {league.usedSeedCount}
+                </TableCell>
+                <TableCell className="border-r text-left font-mono tabular-nums">
+                  {league.seedCount - league.usedSeedCount}
+                </TableCell>
+                <TableCell className="truncate border-r font-mono text-muted-foreground">
+                  {league._id}
+                </TableCell>
+                <TableCell className="flex justify-end gap-1 font-mono">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPresetLeague(league)}
+                  >
+                    <SlidersHorizontal />
+                    Edit preset
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon-sm"
+                    aria-label={`Delete ${league.leagueName}`}
+                    onClick={() => {
+                      setSelectedLeagueId(league._id);
+                      setIsAlertOpen(true);
+                    }}
+                  >
+                    <Trash />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
@@ -167,6 +190,7 @@ export function LeagueTableSkeleton() {
           <TableRow>
             <TableHead className="w-24">Number</TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Preset time limit</TableHead>
             <TableHead className="text-right">Total seeds</TableHead>
             <TableHead className="text-right">Used</TableHead>
             <TableHead className="text-right">Unused</TableHead>
@@ -181,6 +205,9 @@ export function LeagueTableSkeleton() {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-5 w-32" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-20" />
               </TableCell>
               <TableCell>
                 <Skeleton className="ml-auto h-5 w-8" />
