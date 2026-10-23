@@ -113,21 +113,8 @@ export function LeaguePage() {
     [leagues, selectedLeagueId]
   );
 
-  const user = useQuery(api.users.currentUser);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const closeAddDialog = () => setIsAddDialogOpen(false);
-
-  const canAddSeedToLeague = useMemo(() => {
-    if (!user) return false;
-    if (user.roles.includes("admin")) return true;
-    if (user.roles.includes("uploader") && selectedLeagueId) {
-      return (user.uploaderLeagues ?? []).includes(selectedLeagueId);
-    }
-    if (user.roles.includes("host") && selectedLeagueId) {
-      return (user.hostLeagueId ?? []).includes(selectedLeagueId);
-    }
-    return false;
-  }, [user, selectedLeagueId]);
 
   const moveUp = (id: Id<"seeds">) => {
     void moveSeed({ seedId: id, movement: "UP" });
@@ -155,29 +142,25 @@ export function LeaguePage() {
                 league={league}
                 seeds={seeds ?? []}
               />
-              {canAddSeedToLeague && (
-                <>
-                  <ImportSeedFilterSetButton key={league._id} league={league} />
-                  <Dialog
-                    open={isAddDialogOpen}
-                    onOpenChange={setIsAddDialogOpen}
-                  >
-                    <DialogTrigger render={<Button type="button" size="sm" />}>
-                      <Plus className="size-4" />
-                      Add seed
-                    </DialogTrigger>
-                    {isAddDialogOpen && (
-                      <AddSeedDialog
-                        onClose={closeAddDialog}
-                        leagues={uploadLeagues || []}
-                        defaultLeagueId={league._id}
-                        lockLeague={true}
-                        allowUnassigned={false}
-                      />
-                    )}
-                  </Dialog>
-                </>
-              )}
+              <ImportSeedFilterSetButton key={league._id} league={league} />
+              <Dialog
+                open={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+              >
+                <DialogTrigger render={<Button type="button" size="sm" />}>
+                  <Plus className="size-4" />
+                  Add seed
+                </DialogTrigger>
+                {isAddDialogOpen && (
+                  <AddSeedDialog
+                    onClose={closeAddDialog}
+                    leagues={uploadLeagues || []}
+                    defaultLeagueId={league._id}
+                    lockLeague={true}
+                    allowUnassigned={false}
+                  />
+                )}
+              </Dialog>
             </div>
           )}
         </div>
