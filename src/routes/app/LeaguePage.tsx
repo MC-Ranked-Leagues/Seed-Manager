@@ -148,29 +148,36 @@ export function LeaguePage() {
               Active-week seeds assigned to this league.
             </p>
           </div>
-          {canAddSeedToLeague && league && (
+          {league && (
             <div className="flex flex-wrap items-center gap-2">
               <DownloadPresetsButton
                 key={`presets-${league._id}`}
                 league={league}
                 seeds={seeds ?? []}
               />
-              <ImportSeedFilterSetButton key={league._id} league={league} />
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger render={<Button type="button" size="sm" />}>
-                  <Plus className="size-4" />
-                  Add seed
-                </DialogTrigger>
-                {isAddDialogOpen && (
-                  <AddSeedDialog
-                    onClose={closeAddDialog}
-                    leagues={uploadLeagues || []}
-                    defaultLeagueId={league._id}
-                    lockLeague={true}
-                    allowUnassigned={false}
-                  />
-                )}
-              </Dialog>
+              {canAddSeedToLeague && (
+                <>
+                  <ImportSeedFilterSetButton key={league._id} league={league} />
+                  <Dialog
+                    open={isAddDialogOpen}
+                    onOpenChange={setIsAddDialogOpen}
+                  >
+                    <DialogTrigger render={<Button type="button" size="sm" />}>
+                      <Plus className="size-4" />
+                      Add seed
+                    </DialogTrigger>
+                    {isAddDialogOpen && (
+                      <AddSeedDialog
+                        onClose={closeAddDialog}
+                        leagues={uploadLeagues || []}
+                        defaultLeagueId={league._id}
+                        lockLeague={true}
+                        allowUnassigned={false}
+                      />
+                    )}
+                  </Dialog>
+                </>
+              )}
             </div>
           )}
         </div>
