@@ -43,6 +43,7 @@ import {
 import { SEED_TYPES } from "@/lib/consts";
 import { getErrorMessage } from "@/lib/errors";
 import { getLeagueListLabel } from "@/lib/userAccess";
+import { ReplayUploadButton } from "@/components/ReplayUploadButton";
 
 export function SeedPage() {
   const { leagueId, seedId } = useParams();
@@ -330,6 +331,9 @@ export function SeedPage() {
           <AlertDialogDescription>
             Warning: Marking a seed as used publishes it immediately. Only
             admins can reverse this action.
+            <div className="absolute bottom-4 left-4">
+              <ReplayUploadButton seed={seed} />
+            </div>
           </AlertDialogDescription>
           {usedError && <p className="text-xs text-destructive">{usedError}</p>}
           <AlertDialogFooter>
@@ -339,6 +343,7 @@ export function SeedPage() {
             <AlertDialogAction
               disabled={isMarkingUsed}
               onClick={() => void handleMarkUsed()}
+              variant="destructive"
             >
               {isMarkingUsed ? "Marking used" : "Mark used"}
             </AlertDialogAction>

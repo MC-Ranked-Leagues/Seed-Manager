@@ -241,4 +241,28 @@ http.route({
   ),
 });
 
+http.route({
+  path: "/api/seeds/replay",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const p = new URL(request.url).searchParams;
+    const key = p.get("key");
+    if (!key) {
+      return new Response("Bad request", { status: 400 });
+    }
+    const url = await ctx.runAction(internal.replayStorage.getDownloadUrl, {
+      key: key,
+    });
+    if (!url)
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+      });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: url, "Cache-Control": "no-store" },
+    });
+  }),
+});
+
 export default http;

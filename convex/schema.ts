@@ -77,6 +77,7 @@ export default defineSchema({
     usedBy: v.optional(v.id("users")),
     leagueChangedByAdminId: v.optional(v.id("users")),
     commentCount: v.number(),
+    replayKey: v.optional(v.string()),
   })
     .index("by_number_league_expired", ["seedNumber", "leagueId", "isExpired"])
     .index("by_owseed", ["overworld"])
@@ -102,7 +103,8 @@ export default defineSchema({
       "leagueId",
       "assignedWeekNumber",
       "isExpired",
-    ]),
+    ])
+    .index("by_replayKey", ["replayKey"]),
   comments: defineTable({
     seedId: v.id("seeds"),
     author: v.id("users"),
