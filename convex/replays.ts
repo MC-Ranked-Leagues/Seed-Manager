@@ -3,9 +3,7 @@ import { ConvexError, v } from "convex/values";
 import { replayKeyFor } from "./lib/replayKey";
 import { canManageLeagueAsAdminOrHost } from "./lib/permissions";
 import { writeLog } from "./lib/logging";
-import { MAX_LEAGUE_SEED_LIST_COUNT } from "./lib/consts";
 import { requireSettings } from "./lib/settings";
-import { compareSeedOrder } from "./lib/seedOrder";
 
 export const getUploadTarget = internalQuery({
   args: { userId: v.id("users"), seedId: v.id("seeds") },
@@ -49,24 +47,27 @@ export const getUploadTarget = internalQuery({
 });
 
 export const setReplayKey = internalMutation({
-  args: { seedId: v.id("seeds"), key: v.string() },
+  args: { userId: v.id("users"), seedId: v.id("seeds"), key: v.string() },
   returns: v.null(),
-  handler: async (ctx, { seedId, key }) => {
+  handler: async (ctx, { userId, seedId, key }) => {
+    const user = await ctx.db.get("users", userId);
+    if (!user) throw new ConvexError("User not found");
+
     const seed = await ctx.db.get("seeds", seedId);
     if (!seed) throw new ConvexError("Seed not found");
 
-    if (seed.replayKey === key) return null;
-
-    await ctx.db.patch("seeds", seedId, { replayKey: key });
+    const isReplacing = seed.replayKey === key;
+    if (!isReplacing) {
+      await ctx.db.patch("seeds", seedId, { replayKey: key });
+    }
 
     await writeLog(ctx, {
       eventType: "seed.updated",
-      actorType: "system",
-      actorName: "Replay storage",
+      actor: user,
       targetType: "seed",
       targetId: seed._id,
       targetLabel: `Seed ${seed.overworld}`,
-      summary: `Stored replay key for seed #${seed.seedNumber ?? "unknown"} in week ${seed.assignedWeekNumber ?? "unknown"}.`,
+      summary: `${isReplacing ? "Replaced" : "Uploaded"} replay for seed #${seed.seedNumber ?? "unknown"} in week ${seed.assignedWeekNumber ?? "unknown"}.`,
     });
 
     return null;

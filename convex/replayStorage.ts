@@ -59,7 +59,11 @@ export const confirmReplayUpload = action({
     });
     const s3 = client();
     await s3.send(new HeadObjectCommand({ Bucket: bucket(), Key: key }));
-    await ctx.runMutation(internal.replays.setReplayKey, { seedId, key });
+    await ctx.runMutation(internal.replays.setReplayKey, {
+      userId,
+      seedId,
+      key,
+    });
     return null;
   },
 });
