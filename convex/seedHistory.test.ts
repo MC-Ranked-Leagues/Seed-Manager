@@ -78,6 +78,7 @@ describe("public seed history API", () => {
         end: "used-end",
         rng: "used-rng",
         type: "DESERT_TEMPLE",
+        replayKey: null,
       },
     ]);
   });
@@ -165,6 +166,7 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: "BURIED_TREASURE",
+        replayKey: null,
       },
       {
         order: 2,
@@ -173,6 +175,7 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: "SHIPWRECK",
+        replayKey: null,
       },
       {
         order: 3,
@@ -181,6 +184,7 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: null,
+        replayKey: null,
       },
       {
         order: 4,
@@ -189,6 +193,7 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: "VILLAGE",
+        replayKey: null,
       },
     ]);
   });
@@ -255,6 +260,7 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: "RUINED_PORTAL",
+        replayKey: null,
       },
       {
         order: 2,
@@ -263,6 +269,63 @@ describe("public seed history API", () => {
         end: "end",
         rng: "rng",
         type: "RUINED_PORTAL",
+        replayKey: null,
+      },
+    ]);
+  });
+
+  test("publishes replayKey when seed has an associated replay", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.run(async (ctx) => {
+      const addedBy = await ctx.db.insert("users", {
+        name: "Seed Uploader",
+        status: "active",
+        roles: ["uploader"],
+      });
+      const leagueId = await ctx.db.insert("leagues", {
+        leagueNumber: 1,
+        leagueName: "League One",
+        seedCount: 1,
+        usedSeedCount: 1,
+      });
+
+      await ctx.db.insert("settings", {
+        key: "global",
+        currentWeekNumber: 3,
+        seedTestingPaused: false,
+      });
+      await ctx.db.insert("seeds", {
+        seedNumber: 1,
+        leagueId,
+        overworld: "12345",
+        nether: "nether",
+        end: "end",
+        rng: "rng",
+        type: "VILLAGE",
+        addedBy,
+        isUsed: true,
+        isExpired: false,
+        assignedWeekNumber: 3,
+        commentCount: 0,
+        replayKey: "replays/replay-week3_league1_12345.rrf",
+      });
+    });
+
+    const response = await t.fetch(
+      "/api/seeds/history?leagueNumber=1&weekNumber=3"
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      {
+        order: 1,
+        overworld: "12345",
+        nether: "nether",
+        end: "end",
+        rng: "rng",
+        type: "VILLAGE",
+        replayKey: "replays/replay-week3_league1_12345.rrf",
       },
     ]);
   });
@@ -422,5 +485,33 @@ describe("public seed history API", () => {
       error: "Too many published seeds to return.",
       status: 500,
     });
+  });
+});
+
+describe("replay download API", () => {
+  test("rejects request missing key parameter with 400", async () => {
+    const t = convexTest(schema, modules);
+    const response = await t.fetch("/api/seeds/replay");
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("Bad request");
+  });
+
+  test("returns 404 for a malformed key", async () => {
+    const t = convexTest(schema, modules);
+    const response = await t.fetch("/api/seeds/replay?key=invalid-key");
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("returns 404 for a well-formed key with no matching seed", async () => {
+    const t = convexTest(schema, modules);
+    const response = await t.fetch(
+      `/api/seeds/replay?key=${encodeURIComponent("replays/replay-week1_league1_1.rrf")}`
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 });

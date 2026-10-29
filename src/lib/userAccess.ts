@@ -89,3 +89,26 @@ export function updateManagedRole(
 
   return currentRoles.filter((currentRole) => currentRole !== role);
 }
+
+export function canHostLeague(
+  user:
+    | {
+        roles: UserRole[];
+        hostLeagueId?: Id<"leagues">[];
+      }
+    | null
+    | undefined,
+  leagueId: Id<"leagues"> | undefined
+) {
+  if (!user || leagueId === undefined) {
+    return false;
+  }
+
+  if (user.roles.includes("admin")) {
+    return true;
+  }
+
+  return (
+    user.roles.includes("host") && (user.hostLeagueId ?? []).includes(leagueId)
+  );
+}

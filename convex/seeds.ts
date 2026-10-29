@@ -193,6 +193,7 @@ function toPublishedSeed(seed: Doc<"seeds">, index: number) {
     end: seed.end,
     rng: seed.rng,
     type: seed.type ?? null,
+    replayKey: seed.replayKey ?? null,
   };
 }
 

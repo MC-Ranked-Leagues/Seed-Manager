@@ -5,6 +5,7 @@ import { MAX_LEAGUE_SEED_LIST_COUNT } from "./consts";
 import { getPrimaryActorType, writeLog } from "./logging";
 import { compareSeedOrder } from "./seedOrder";
 import { requireSettings } from "./settings";
+import { internal } from "../_generated/api";
 
 export async function hardDeleteSeed(
   ctx: MutationCtx,
@@ -54,6 +55,12 @@ export async function hardDeleteSeed(
     .withIndex("by_seedId_and_createdAt", (q) => q.eq("seedId", seed._id))) {
     await ctx.db.delete("comments", comment._id);
     deletedCommentCount += 1;
+  }
+
+  if (seed.replayKey) {
+    await ctx.scheduler.runAfter(0, internal.replayStorage.deleteReplay, {
+      key: seed.replayKey,
+    });
   }
 
   await ctx.db.delete("seeds", seed._id);

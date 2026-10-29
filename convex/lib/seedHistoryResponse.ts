@@ -16,6 +16,7 @@ export const PublishedSeedSchema = z.object({
   end: z.string(),
   rng: z.string(),
   type: PublishedSeedTypeSchema.nullable(),
+  replayKey: z.string().nullable(),
 });
 
 export const SeedHistoryResponseSchema = z.array(PublishedSeedSchema);

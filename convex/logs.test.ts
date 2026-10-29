@@ -3,6 +3,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -104,7 +105,7 @@ describe("audit logs", () => {
       actorType: "admin",
     });
 
-    expect(logs.page.map((log) => log.eventType)).toEqual([
+    expect(logs.page.map((log: Doc<"logs">) => log.eventType)).toEqual([
       "week.advanced",
       "testing.resumed",
       "testing.paused",

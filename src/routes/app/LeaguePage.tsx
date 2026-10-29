@@ -45,6 +45,8 @@ import { Button } from "@/components/ui/button";
 import AddSeedDialog from "@/components/dialogs/AddSeedDialog";
 import { ImportSeedFilterSetButton } from "@/routes/app/ImportSeedFilterSetButton";
 import { DownloadPresetsButton } from "@/routes/app/DownloadPresetsButton";
+import { BulkReplayUploadButton } from "@/routes/app/BulkReplayUploadButton";
+import { canHostLeague } from "@/lib/userAccess";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -104,6 +106,8 @@ export function LeaguePage() {
   const selectedLeagueId = leagueId as Id<"leagues"> | undefined;
   const leagues = useQuery(api.leagues.listLeagues);
   const uploadLeagues = useQuery(api.leagues.listSeedUploadLeagueOptions);
+  const user = useQuery(api.users.currentUser);
+  const settings = useQuery(api.settings.current);
   const seeds = useQuery(
     api.seeds.listSeedsByLeague,
     selectedLeagueId ? { leagueId: selectedLeagueId } : "skip"
@@ -143,10 +147,17 @@ export function LeaguePage() {
                 seeds={seeds ?? []}
               />
               <ImportSeedFilterSetButton key={league._id} league={league} />
-              <Dialog
-                open={isAddDialogOpen}
-                onOpenChange={setIsAddDialogOpen}
-              >
+              {canHostLeague(user, league._id) && (
+                <BulkReplayUploadButton
+                  key={`replays-${league._id}`}
+                  seeds={seeds ?? []}
+                  disabled={
+                    Boolean(settings?.seedTestingPaused) &&
+                    !user?.roles.includes("admin")
+                  }
+                />
+              )}
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger render={<Button type="button" size="sm" />}>
                   <Plus className="size-4" />
                   Add seed

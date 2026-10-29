@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from "convex/react";
-import { ArrowRightLeft, CheckCircle2, Sprout, Trash2 } from "lucide-react";
+import {
+  ArrowRightLeft,
+  CheckCircle2,
+  Film,
+  Sprout,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -42,7 +48,8 @@ import {
 } from "@/components/ui/tooltip";
 import { SEED_TYPES } from "@/lib/consts";
 import { getErrorMessage } from "@/lib/errors";
-import { getLeagueListLabel } from "@/lib/userAccess";
+import { canHostLeague, getLeagueListLabel } from "@/lib/userAccess";
+import { ReplayDialog } from "@/components/dialogs/ReplayDialog";
 
 export function SeedPage() {
   const { leagueId, seedId } = useParams();
@@ -57,6 +64,7 @@ export function SeedPage() {
   const [isChangingLeague, setIsChangingLeague] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isMarkUsedDialogOpen, setIsMarkUsedDialogOpen] = useState(false);
+  const [isReplayDialogOpen, setIsReplayDialogOpen] = useState(false);
   const [isChangeLeagueDialogOpen, setIsChangeLeagueDialogOpen] =
     useState(false);
   const [targetLeagueId, setTargetLeagueId] = useState<Id<"leagues"> | null>(
@@ -258,6 +266,18 @@ export function SeedPage() {
           </div>
 
           <div className="flex w-full items-center justify-end gap-2">
+            {(seed.replayKey || canHostLeague(user, seed.leagueId)) && (
+              <Button
+                aria-label={seed.replayKey ? "Open replay" : "Upload replay"}
+                onClick={() => setIsReplayDialogOpen(true)}
+                size="lg"
+                type="button"
+                variant={seed.replayKey ? "secondary" : "outline"}
+              >
+                <Film data-icon="inline-start" />
+                {seed.replayKey ? "Replay" : "Upload replay"}
+              </Button>
+            )}
             {canMarkUsed(seed, user) && (
               <Button
                 aria-label={
@@ -339,12 +359,23 @@ export function SeedPage() {
             <AlertDialogAction
               disabled={isMarkingUsed}
               onClick={() => void handleMarkUsed()}
+              variant="destructive"
             >
               {isMarkingUsed ? "Marking used" : "Mark used"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReplayDialog
+        open={isReplayDialogOpen}
+        onOpenChange={setIsReplayDialogOpen}
+        seed={seed}
+        canUpload={canHostLeague(user, seed.leagueId)}
+        uploadPaused={
+          Boolean(settings?.seedTestingPaused) && !user?.roles.includes("admin")
+        }
+      />
 
       <DeleteSeedDialog
         deleting={isDeleting}
@@ -438,25 +469,13 @@ function canMarkUsed(
   seed: {
     leagueId?: Id<"leagues">;
     isExpired?: boolean;
-    isUsed: boolean;
   },
   user: {
     roles: Array<"admin" | "host" | "uploader">;
     hostLeagueId?: Id<"leagues">[];
   } | null
 ) {
-  if (!user || seed.leagueId === undefined || seed.isExpired) {
-    return false;
-  }
-
-  if (user.roles.includes("admin")) {
-    return true;
-  }
-
-  return (
-    user.roles.includes("host") &&
-    (user.hostLeagueId ?? []).includes(seed.leagueId)
-  );
+  return !seed.isExpired && canHostLeague(user, seed.leagueId);
 }
 
 function canChangeLeague(

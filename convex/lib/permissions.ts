@@ -100,3 +100,14 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
 
   return user;
 }
+
+export function canManageLeagueAsAdminOrHost(
+  user: Pick<Doc<"users">, "roles" | "hostLeagueId">,
+  leagueId: Id<"leagues">
+) {
+  return (
+    user.roles.includes("admin") ||
+    (user.roles.includes("host") &&
+      (user.hostLeagueId ?? []).includes(leagueId))
+  );
+}

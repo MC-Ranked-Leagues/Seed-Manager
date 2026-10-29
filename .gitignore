@@ -38,3 +38,6 @@ scripts/data/
 *.idea.md
 *.report.md
 *.report.html
+
+# Local test replays
+replays/
