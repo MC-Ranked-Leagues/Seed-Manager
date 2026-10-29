@@ -24,3 +24,22 @@ export function getReplayOverworldSeed(bytes: ArrayBuffer): string {
     throw new Error("This isn't a valid replay file");
   }
 }
+
+// upload straight to storage, then tell the server it's done
+export async function uploadReplayFile(
+  file: File,
+  requestUpload: (contentType: string) => Promise<string>,
+  confirmUpload: () => Promise<null>
+) {
+  const contentType = file.type || "application/octet-stream";
+  const uploadUrl = await requestUpload(contentType);
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": contentType },
+  });
+  if (!res.ok) {
+    throw new Error(`Upload failed (${res.status} ${res.statusText})`);
+  }
+  await confirmUpload();
+}

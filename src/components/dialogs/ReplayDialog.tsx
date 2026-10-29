@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/errors";
-import { getReplayOverworldSeed } from "@/lib/replay";
+import { getReplayOverworldSeed, uploadReplayFile } from "@/lib/replay";
 
 interface ReplayDialogProps {
   open: boolean;
@@ -46,18 +46,11 @@ export function ReplayDialog({
         throw new Error("This replay was recorded on a different seed.");
       }
 
-      // upload straight to storage, then tell the server it's done
-      const contentType = file.type || "application/octet-stream";
-      const uploadUrl = await requestUpload({ seedId: seed._id, contentType });
-      const res = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": contentType },
-      });
-      if (!res.ok) {
-        throw new Error(`Upload failed (${res.status} ${res.statusText})`);
-      }
-      await confirmUpload({ seedId: seed._id });
+      await uploadReplayFile(
+        file,
+        (contentType) => requestUpload({ seedId: seed._id, contentType }),
+        () => confirmUpload({ seedId: seed._id })
+      );
     } catch (err) {
       setError(getErrorMessage(err, "Failed to upload replay"));
     } finally {
@@ -81,7 +74,7 @@ export function ReplayDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Replay</DialogTitle>
           <DialogDescription>
@@ -112,10 +105,14 @@ export function ReplayDialog({
             </span>
             <a
               href={`${import.meta.env.VITE_CONVEX_SITE_URL}/api/seeds/replay?key=${encodeURIComponent(seed.replayKey)}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              aria-label="Download replay"
+              title="Download replay"
+              className={buttonVariants({
+                variant: "outline",
+                size: "icon-sm",
+              })}
             >
-              <Download data-icon="inline-start" />
-              Download
+              <Download />
             </a>
           </div>
         )}
