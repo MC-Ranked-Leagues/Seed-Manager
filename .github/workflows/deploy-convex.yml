@@ -1,6 +1,15 @@
 name: Deploy Seed Convex
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - convex/**
+      - convex.json
+      - package.json
+      - bun.lock
+      - .github/workflows/deploy-convex.yml
   workflow_dispatch:
 
 permissions:

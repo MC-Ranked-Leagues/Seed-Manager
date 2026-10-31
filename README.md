@@ -60,9 +60,8 @@ See [published-history.md](docs/published-history.md) for compatibility rules.
 The frontend build runs at the repository root with `bun run build:cloudflare`
 and produces `dist`. Configure `VITE_CONVEX_URL` in the hosting environment.
 
-The prepared backend deployment workflow is manual and additionally requires
-`SEED_DEPLOY_ENABLED` to equal `true`. Leave it disabled until the old MCRL Seed
-workflow is disabled and the production cutover is explicitly approved. It uses
-the existing deployment key through the `SEED_CONVEX_DEPLOY_KEY` repository secret.
+The backend deployment workflow runs when backend files change on `main` and can
+also be started manually. It requires `SEED_DEPLOY_ENABLED` to equal `true` and
+uses the deployment key in the `SEED_CONVEX_DEPLOY_KEY` repository secret.
 
 This repository continues the original `NotAva1ble/seed-manager` Git history.
