@@ -1,6 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
-import { AlertCircle, Download, Film, Loader2, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  Download,
+  Film,
+  Loader2,
+  Play,
+  Upload,
+} from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -13,12 +20,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/errors";
-import { getReplayOverworldSeed, uploadReplayFile } from "@/lib/replay";
+import {
+  fetchPublishedSeedOrder,
+  getReplayOverworldSeed,
+  getWatchReplayUrl,
+  uploadReplayFile,
+} from "@/lib/replay";
 
 interface ReplayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   seed: Doc<"seeds">;
+  leagueNumber: number | undefined;
   canUpload: boolean;
   uploadPaused: boolean;
 }
@@ -27,6 +40,7 @@ export function ReplayDialog({
   open,
   onOpenChange,
   seed,
+  leagueNumber,
   canUpload,
   uploadPaused,
 }: ReplayDialogProps) {
@@ -35,6 +49,31 @@ export function ReplayDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // keyed by seed so a stale order never shows for a different seed
+  const [publishedOrder, setPublishedOrder] = useState<{
+    seedId: string;
+    order: number | null;
+  } | null>(null);
+
+  const weekNumber = seed.assignedWeekNumber;
+  const hasReplay = Boolean(seed.replayKey);
+  const matchOrder =
+    publishedOrder?.seedId === seed._id ? publishedOrder.order : null;
+
+  useEffect(() => {
+    if (!open || !hasReplay || !leagueNumber || !weekNumber) return;
+
+    const controller = new AbortController();
+    fetchPublishedSeedOrder(
+      leagueNumber,
+      weekNumber,
+      seed.overworld,
+      controller.signal
+    )
+      .then((order) => setPublishedOrder({ seedId: seed._id, order }))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [open, hasReplay, leagueNumber, weekNumber, seed._id, seed.overworld]);
 
   async function handleFileSelect(file: File) {
     setIsUploading(true);
@@ -114,6 +153,21 @@ export function ReplayDialog({
             >
               <Download />
             </a>
+            {leagueNumber && weekNumber && matchOrder !== null && (
+              <a
+                href={getWatchReplayUrl(leagueNumber, weekNumber, matchOrder)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Watch replay"
+                title="Watch replay"
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "icon-sm",
+                })}
+              >
+                <Play />
+              </a>
+            )}
           </div>
         )}
 

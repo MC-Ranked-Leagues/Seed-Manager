@@ -516,6 +516,7 @@ export function AdminSeedsPage() {
           }}
           open
           seed={replaySeed}
+          leagueNumber={selectedLeague?.leagueNumber}
           uploadPaused={false}
         />
       )}

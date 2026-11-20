@@ -371,6 +371,7 @@ export function SeedPage() {
         open={isReplayDialogOpen}
         onOpenChange={setIsReplayDialogOpen}
         seed={seed}
+        leagueNumber={currentLeague?.leagueNumber}
         canUpload={canHostLeague(user, seed.leagueId)}
         uploadPaused={
           Boolean(settings?.seedTestingPaused) && !user?.roles.includes("admin")

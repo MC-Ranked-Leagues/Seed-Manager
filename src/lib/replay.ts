@@ -43,3 +43,40 @@ export async function uploadReplayFile(
   }
   await confirmUpload();
 }
+
+// `order` only exists in the published history, so ask the same endpoint
+// Seed Explorer reads. Returns null when the seed isn't published.
+export async function fetchPublishedSeedOrder(
+  leagueNumber: number,
+  weekNumber: number,
+  overworld: string,
+  signal?: AbortSignal
+): Promise<number | null> {
+  const params = new URLSearchParams({
+    leagueNumber: String(leagueNumber),
+    weekNumber: String(weekNumber),
+  });
+  const response = await fetch(
+    `${import.meta.env.VITE_CONVEX_SITE_URL}/api/seeds/history?${params}`,
+    { signal }
+  );
+  if (!response.ok) return null;
+  const seeds = (await response.json()) as {
+    order: number;
+    overworld: string;
+  }[];
+  return seeds.find((seed) => seed.overworld === overworld)?.order ?? null;
+}
+
+export function getWatchReplayUrl(
+  leagueNumber: number,
+  weekNumber: number,
+  order: number
+) {
+  const params = new URLSearchParams({
+    league: String(leagueNumber),
+    week: String(weekNumber),
+    match: String(order),
+  });
+  return `https://mcsr-browser.pages.dev/mcrl?${params}`;
+}
