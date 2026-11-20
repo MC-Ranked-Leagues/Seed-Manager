@@ -20,7 +20,7 @@ import {
 } from "./lib/consts";
 import { getPrimaryActorType, writeLog } from "./lib/logging";
 import { hardDeleteSeed } from "./lib/seedDeletion";
-import { compareSeedOrder } from "./lib/seedOrder";
+import { compareSeedOrder, moveSeedToPosition } from "./lib/seedOrder";
 
 type ALL_SEED_TYPES = [
   "BURIED_TREASURE",
@@ -822,7 +822,7 @@ export const importSeeds = mutation({
 export const moveSeed = mutation({
   args: {
     seedId: v.id("seeds"),
-    movement: v.union(v.literal("UP"), v.literal("DOWN")),
+    position: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await requireActiveUser(ctx);
@@ -850,38 +850,20 @@ export const moveSeed = mutation({
       });
     }
 
-    const seedNumber = seed.seedNumber;
-
-    if (!seedNumber) {
-      throw new ConvexError({
-        code: "SEED_NUMBER_UNDEFINED",
-        message: "The seed number wasn't initialized",
-      });
-    }
-
-    const nextSeedNumber =
-      args.movement === "UP" ? seedNumber - 1 : seedNumber + 1;
-
-    if (nextSeedNumber < 1) {
-      return;
-    }
-
-    const adjacentSeed = await ctx.db
+    const group = await ctx.db
       .query("seeds")
-      .withIndex("by_number_league_expired", (q) =>
-        q
-          .eq("seedNumber", nextSeedNumber)
-          .eq("leagueId", seed.leagueId)
-          .eq("isExpired", false)
+      .withIndex("by_leagueId_and_isExpired", (q) =>
+        q.eq("leagueId", league._id).eq("isExpired", false)
       )
-      .unique();
+      .take(MAX_LEAGUE_SEED_LIST_COUNT);
 
-    if (!adjacentSeed) {
-      return;
-    }
-
-    await ctx.db.patch("seeds", seed._id, { seedNumber: nextSeedNumber });
-    await ctx.db.patch("seeds", adjacentSeed._id, { seedNumber });
+    const moved = await moveSeedToPosition(
+      ctx,
+      group.sort(compareSeedOrder),
+      seed._id,
+      args.position
+    );
+    if (!moved) return null;
 
     await writeLog(ctx, {
       eventType: "seed.reordered",
@@ -890,8 +872,10 @@ export const moveSeed = mutation({
       targetType: "seed",
       targetId: seed._id,
       targetLabel: getSeedLogLabel(seed),
-      summary: `Moved the seed from position #${seedNumber} to #${nextSeedNumber} in ${league.leagueName}.`,
+      summary: `Moved the seed from position #${moved.from} to #${moved.to} in ${league.leagueName}.`,
     });
+
+    return null;
   },
 });
 

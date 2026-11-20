@@ -5,7 +5,7 @@ import { MAX_LEAGUE_SEED_LIST_COUNT, NUMERIC_SEED_PATTERN } from "./lib/consts";
 import { writeLog } from "./lib/logging";
 import { requireAdmin } from "./lib/permissions";
 import { hardDeleteSeed } from "./lib/seedDeletion";
-import { compareSeedOrder } from "./lib/seedOrder";
+import { compareSeedOrder, moveSeedToPosition } from "./lib/seedOrder";
 import { requireSettings } from "./lib/settings";
 
 const seedTypeValidator = v.union(
@@ -219,7 +219,7 @@ export const updateSeed = mutation({
 export const reorderSeed = mutation({
   args: {
     seedId: v.id("seeds"),
-    movement: v.union(v.literal("UP"), v.literal("DOWN")),
+    position: v.number(),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
@@ -248,27 +248,8 @@ export const reorderSeed = mutation({
       });
     }
 
-    const currentIndex = group.findIndex((item) => item._id === seed._id);
-    const nextIndex =
-      args.movement === "UP" ? currentIndex - 1 : currentIndex + 1;
-    if (currentIndex === -1 || nextIndex < 0 || nextIndex >= group.length) {
-      return null;
-    }
-
-    const currentSeed = group[currentIndex];
-    const nextSeed = group[nextIndex];
-    if (!currentSeed || !nextSeed) {
-      return null;
-    }
-
-    group[currentIndex] = nextSeed;
-    group[nextIndex] = currentSeed;
-    for (const [index, item] of group.entries()) {
-      const seedNumber = index + 1;
-      if (item.seedNumber !== seedNumber) {
-        await ctx.db.patch("seeds", item._id, { seedNumber });
-      }
-    }
+    const moved = await moveSeedToPosition(ctx, group, seed._id, args.position);
+    if (!moved) return null;
 
     await writeLog(ctx, {
       eventType: "seed.reordered",
@@ -277,7 +258,7 @@ export const reorderSeed = mutation({
       targetType: "seed",
       targetId: seed._id,
       targetLabel: `Seed ${seed.overworld}`,
-      summary: `Moved the seed from position #${currentIndex + 1} to #${nextIndex + 1} in ${league.leagueName} for week ${seed.assignedWeekNumber}.`,
+      summary: `Moved the seed from position #${moved.from} to #${moved.to} in ${league.leagueName} for week ${seed.assignedWeekNumber}.`,
     });
 
     return null;

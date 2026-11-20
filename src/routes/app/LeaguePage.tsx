@@ -1,16 +1,13 @@
 import { useMutation, useQuery } from "convex/react";
-import {
-  CircleAlert,
-  MessageCircle,
-  MoreVertical,
-  Plus,
-  Sprout,
-} from "lucide-react";
+import { CircleAlert, MessageCircle, Plus, Sprout } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate, useParams } from "react-router";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { SeedStatusBadge } from "@/components/SeedStatusBadge";
+import { SortableSeedRows } from "@/components/SortableSeedRows";
+import { SortableTableRow } from "@/components/SortableTableRow";
 import { SeedValueTableCell } from "@/components/SeedValueTableCell";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,12 +44,8 @@ import { ImportSeedFilterSetButton } from "@/routes/app/ImportSeedFilterSetButto
 import { DownloadPresetsButton } from "@/routes/app/DownloadPresetsButton";
 import { BulkReplayUploadButton } from "@/routes/app/BulkReplayUploadButton";
 import { canHostLeague } from "@/lib/userAccess";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+import { getErrorMessage } from "@/lib/errors";
+import { moveSeedInList } from "@/lib/seedManagement";
 
 type SeedDistributionRequirement = {
   required: number;
@@ -99,7 +92,21 @@ const LEAGUE_SEED_DISTRIBUTIONS: Partial<
 };
 
 export function LeaguePage() {
-  const moveSeed = useMutation(api.seeds.moveSeed);
+  const moveSeed = useMutation(api.seeds.moveSeed).withOptimisticUpdate(
+    (store, { seedId, position }) => {
+      for (const { args, value } of store.getAllQueries(
+        api.seeds.listSeedsByLeague
+      )) {
+        if (value?.some((seed) => seed._id === seedId)) {
+          store.setQuery(
+            api.seeds.listSeedsByLeague,
+            args,
+            moveSeedInList(value, seedId, position)
+          );
+        }
+      }
+    }
+  );
 
   const { leagueId } = useParams();
   const navigate = useNavigate();
@@ -108,10 +115,18 @@ export function LeaguePage() {
   const uploadLeagues = useQuery(api.leagues.listSeedUploadLeagueOptions);
   const user = useQuery(api.users.currentUser);
   const settings = useQuery(api.settings.current);
-  const seeds = useQuery(
+  const unsortedSeeds = useQuery(
     api.seeds.listSeedsByLeague,
     selectedLeagueId ? { leagueId: selectedLeagueId } : "skip"
-  )?.sort((a, b) => (a.seedNumber ?? 0) - (b.seedNumber ?? 0));
+  );
+  const seeds = useMemo(
+    () =>
+      unsortedSeeds &&
+      [...unsortedSeeds].sort(
+        (a, b) => (a.seedNumber ?? 0) - (b.seedNumber ?? 0)
+      ),
+    [unsortedSeeds]
+  );
   const league = useMemo(
     () => leagues?.find((item) => item._id === selectedLeagueId),
     [leagues, selectedLeagueId]
@@ -120,11 +135,10 @@ export function LeaguePage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const closeAddDialog = () => setIsAddDialogOpen(false);
 
-  const moveUp = (id: Id<"seeds">) => {
-    void moveSeed({ seedId: id, movement: "UP" });
-  };
-  const moveDown = (id: Id<"seeds">) => {
-    void moveSeed({ seedId: id, movement: "DOWN" });
+  const handleMove = (seedId: Id<"seeds">, position: number) => {
+    moveSeed({ seedId, position }).catch((error: unknown) => {
+      toast.error(getErrorMessage(error, "Could not reorder this seed"));
+    });
   };
 
   return (
@@ -191,8 +205,7 @@ export function LeaguePage() {
               onSeedSelect={(selectedId) =>
                 void navigate(`/app/league/${leagueId}/seed/${selectedId}`)
               }
-              moveUp={moveUp}
-              moveDown={moveDown}
+              onMove={handleMove}
             />
           </>
         )}
@@ -338,13 +351,11 @@ function SeedDistributionCard({
 function SeedTable({
   seeds,
   onSeedSelect,
-  moveUp,
-  moveDown,
+  onMove,
 }: {
   seeds: Doc<"seeds">[];
   onSeedSelect: (seedId: Id<"seeds">) => void;
-  moveUp: (id: Id<"seeds">) => void;
-  moveDown: (id: Id<"seeds">) => void;
+  onMove: (seedId: Id<"seeds">, position: number) => void;
 }) {
   const { seedId } = useParams();
 
@@ -365,85 +376,66 @@ function SeedTable({
   }
 
   return (
-    <Table containerClassName="max-h-[calc(100svh-20rem)] overflow-auto rounded-md border">
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-6 border-r">#</TableHead>
-          <TableHead className="border-r text-left">Seed Type</TableHead>
-          <TableHead className="border-r">Overworld</TableHead>
-          <TableHead className="border-r">Nether</TableHead>
-          <TableHead className="border-r">End</TableHead>
-          <TableHead className="border-r">RNG</TableHead>
-          <TableHead className="w-20 border-r text-center">Status</TableHead>
-          <TableHead className="w-12 border-r text-center">
-            <MessageCircle />
-          </TableHead>
-          <TableHead className="w-12" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {seeds.map((seed, index) => {
-          const isSelected = seed._id === seedId;
+    <SortableSeedRows ids={seeds.map((seed) => seed._id)} onMove={onMove}>
+      <Table containerClassName="max-h-[calc(100svh-20rem)] overflow-auto rounded-md border">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-8">
+              <span className="sr-only">Reorder</span>
+            </TableHead>
+            <TableHead className="w-6 border-r border-l">#</TableHead>
+            <TableHead className="border-r text-left">Seed Type</TableHead>
+            <TableHead className="border-r">Overworld</TableHead>
+            <TableHead className="border-r">Nether</TableHead>
+            <TableHead className="border-r">End</TableHead>
+            <TableHead className="border-r">RNG</TableHead>
+            <TableHead className="w-20 border-r text-center">Status</TableHead>
+            <TableHead className="w-12 border-r text-center">
+              <MessageCircle />
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {seeds.map((seed) => {
+            const isSelected = seed._id === seedId;
 
-          return (
-            <TableRow
-              key={seed._id}
-              className={cn("cursor-pointer", isSelected && "bg-muted")}
-              onClick={() => onSeedSelect(seed._id)}
-            >
-              <TableCell className="border-r text-center tabular-nums">
-                {seed.seedNumber ?? "-"}
-              </TableCell>
-              <TableCell className="border-r text-left font-medium">
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <span>
-                    {seed.type ? SEED_TYPES[seed.type] : "Unspecified"}
-                  </span>
-                </div>
-              </TableCell>
+            return (
+              <SortableTableRow
+                key={seed._id}
+                id={seed._id}
+                handleLabel={`Reorder seed ${seed.seedNumber ?? ""}`}
+                className={cn("cursor-pointer", isSelected && "bg-muted")}
+                onClick={() => onSeedSelect(seed._id)}
+              >
+                <TableCell className="border-r border-l text-center tabular-nums">
+                  {seed.seedNumber ?? "-"}
+                </TableCell>
+                <TableCell className="border-r text-left font-medium">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span>
+                      {seed.type ? SEED_TYPES[seed.type] : "Unspecified"}
+                    </span>
+                  </div>
+                </TableCell>
 
-              <SeedValueTableCell value={seed.overworld} />
-              <SeedValueTableCell value={seed.nether} />
-              <SeedValueTableCell value={seed.end} />
-              <SeedValueTableCell value={seed.rng} />
+                <SeedValueTableCell value={seed.overworld} />
+                <SeedValueTableCell value={seed.nether} />
+                <SeedValueTableCell value={seed.end} />
+                <SeedValueTableCell value={seed.rng} />
 
-              <TableCell className="border-r text-center">
-                <SeedStatusBadge status={seed.isUsed ? "used" : "open"} />
-              </TableCell>
+                <TableCell className="border-r text-center">
+                  <SeedStatusBadge status={seed.isUsed ? "used" : "open"} />
+                </TableCell>
 
-              <TableCell className="border-r text-center tabular-nums">
-                {seed.commentCount}
-              </TableCell>
-
-              <TableCell className="text-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    <div>
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Open actions</span>
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      disabled={index === 0}
-                      onClick={() => moveUp(seed._id)}
-                    >
-                      Move up
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={index === seeds.length - 1}
-                      onClick={() => moveDown(seed._id)}
-                    >
-                      Move down
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                <TableCell className="border-r text-center tabular-nums">
+                  {seed.commentCount}
+                </TableCell>
+              </SortableTableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </SortableSeedRows>
   );
 }
 

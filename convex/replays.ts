@@ -17,12 +17,14 @@ export const getUploadTarget = internalQuery({
     if (settings.seedTestingPaused && !user.roles.includes("admin"))
       throw new ConvexError("Seed testing paused");
 
+    // admins can attach replays to past weeks from the manage seeds page
     const seed = await ctx.db.get("seeds", seedId);
     if (
       !seed ||
       !seed.leagueId ||
       !seed.assignedWeekNumber ||
-      seed.assignedWeekNumber !== settings.currentWeekNumber
+      (seed.assignedWeekNumber !== settings.currentWeekNumber &&
+        !user.roles.includes("admin"))
     )
       throw new ConvexError("Seed not found");
 

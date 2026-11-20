@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import {
-  ArrowDown,
-  ArrowUp,
+  Film,
   LockKeyhole,
   Pencil,
   Plus,
@@ -16,6 +15,9 @@ import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { SeedValueTableCell } from "@/components/SeedValueTableCell";
 import { DeleteSeedDialog } from "@/components/DeleteSeedDialog";
+import { ReplayDialog } from "@/components/dialogs/ReplayDialog";
+import { SortableSeedRows } from "@/components/SortableSeedRows";
+import { SortableTableRow } from "@/components/SortableTableRow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +46,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -60,7 +61,11 @@ import {
 } from "@/components/ui/tooltip";
 import { SEED_TYPES } from "@/lib/consts";
 import { getErrorMessage } from "@/lib/errors";
-import { SEED_MODIFICATIONS_SESSION_KEY } from "@/lib/seedManagement";
+import {
+  moveSeedInList,
+  SEED_MODIFICATIONS_SESSION_KEY,
+} from "@/lib/seedManagement";
+import { BulkReplayUploadButton } from "@/routes/app/BulkReplayUploadButton";
 import { getSeedCountLabel } from "@/lib/utils";
 import { SeedManagementDialog } from "./SeedManagementDialog";
 
@@ -72,18 +77,31 @@ export function AdminSeedsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const leagues = useQuery(api.leagues.listLeagues);
   const settings = useQuery(api.settings.current);
-  const reorderSeed = useMutation(api.seedManagement.reorderSeed);
+  const reorderSeed = useMutation(
+    api.seedManagement.reorderSeed
+  ).withOptimisticUpdate((store, { seedId, position }) => {
+    for (const { args, value } of store.getAllQueries(
+      api.seedManagement.listSeeds
+    )) {
+      if (value?.some((seed) => seed._id === seedId)) {
+        store.setQuery(
+          api.seedManagement.listSeeds,
+          args,
+          moveSeedInList(value, seedId, position)
+        );
+      }
+    }
+  });
   const deleteSeed = useMutation(api.seedManagement.deleteSeed);
   const [modificationsEnabled, setModificationsEnabled] = useState(
     () => sessionStorage.getItem(SEED_MODIFICATIONS_SESSION_KEY) === "enabled"
   );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingSeed, setEditingSeed] = useState<ManagedSeed | null>(null);
+  const [replaySeedId, setReplaySeedId] = useState<ManagedSeed["_id"] | null>(
+    null
+  );
   const [deletingSeed, setDeletingSeed] = useState<ManagedSeed | null>(null);
-  const [reordering, setReordering] = useState<{
-    seedId: ManagedSeed["_id"];
-    movement: "UP" | "DOWN";
-  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const requestedLeagueId = searchParams.get("league");
@@ -136,6 +154,8 @@ export function AdminSeedsPage() {
         }
       : "skip"
   );
+  // read the live row so the dialog updates after an upload
+  const replaySeed = seeds?.find((seed) => seed._id === replaySeedId);
   const leagueItems = useMemo(
     () =>
       (leagues ?? []).map((league) => ({
@@ -178,16 +198,10 @@ export function AdminSeedsPage() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const handleReorder = async (seed: ManagedSeed, movement: "UP" | "DOWN") => {
-    setReordering({ seedId: seed._id, movement });
-    try {
-      await reorderSeed({ seedId: seed._id, movement });
-      toast.success(`Seed moved ${movement === "UP" ? "up" : "down"}`);
-    } catch (error) {
+  const handleReorder = (seedId: ManagedSeed["_id"], position: number) => {
+    reorderSeed({ seedId, position }).catch((error: unknown) => {
       toast.error(getErrorMessage(error, "Could not reorder this seed"));
-    } finally {
-      setReordering(null);
-    }
+    });
   };
 
   const handleDelete = async () => {
@@ -310,19 +324,28 @@ export function AdminSeedsPage() {
               ? `${selectedLeague.leagueName} · Week ${selectedWeekNumber}`
               : "Choose a league and week"}
           </p>
-          <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>
-              <Button
-                disabled={addDisabled}
-                onClick={() => setAddDialogOpen(true)}
-                type="button"
-              >
-                <Plus data-icon="inline-start" />
-                Add seed
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{addTooltip}</TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            {selectedLeague && selectedWeekNumber !== undefined && (
+              <BulkReplayUploadButton
+                key={`replays-${selectedLeague._id}-${selectedWeekNumber}`}
+                seeds={seeds ?? []}
+                disabled={!modificationsEnabled}
+              />
+            )}
+            <Tooltip>
+              <TooltipTrigger render={<span className="inline-flex" />}>
+                <Button
+                  disabled={addDisabled}
+                  onClick={() => setAddDialogOpen(true)}
+                  type="button"
+                >
+                  <Plus data-icon="inline-start" />
+                  Add seed
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{addTooltip}</TooltipContent>
+            </Tooltip>
+          </div>
         </CardFooter>
       </Card>
 
@@ -367,100 +390,101 @@ export function AdminSeedsPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <Table
-          className="min-w-5xl table-fixed"
-          containerClassName="max-h-[calc(100svh-23rem)] rounded-md border"
+        <SortableSeedRows
+          ids={seeds.map((seed) => seed._id)}
+          onMove={handleReorder}
         >
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-14 text-right">#</TableHead>
-              <TableHead className="w-40 border-r border-l">
-                Seed type
-              </TableHead>
-              <TableHead className="border-r">Overworld</TableHead>
-              <TableHead className="border-r">Nether</TableHead>
-              <TableHead className="border-r">End</TableHead>
-              <TableHead className="border-r">RNG</TableHead>
-              <TableHead className="w-24 border-r">Status</TableHead>
-              <TableHead className="w-44 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {seeds.map((seed, index) => {
-              const isMovingUp =
-                reordering?.seedId === seed._id && reordering.movement === "UP";
-              const isMovingDown =
-                reordering?.seedId === seed._id &&
-                reordering.movement === "DOWN";
-              const reorderDisabled =
-                !modificationsEnabled || reordering !== null;
-
-              return (
-                <TableRow key={seed._id}>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    {seed.seedNumber ?? index + 1}
-                  </TableCell>
-                  <TableCell className="border-r border-l font-medium">
-                    {seed.type ? SEED_TYPES[seed.type] : "Unspecified"}
-                  </TableCell>
-                  <SeedValueTableCell value={seed.overworld} />
-                  <SeedValueTableCell value={seed.nether} />
-                  <SeedValueTableCell value={seed.end} />
-                  <SeedValueTableCell value={seed.rng} />
-                  <TableCell className="border-r">
-                    <Badge variant={seed.isUsed ? "secondary" : "outline"}>
-                      {seed.isUsed ? "Used" : "Unused"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
+          <Table
+            className="min-w-5xl table-fixed"
+            containerClassName="max-h-[calc(100svh-23rem)] rounded-md border"
+          >
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8">
+                  <span className="sr-only">Reorder</span>
+                </TableHead>
+                <TableHead className="w-14 text-right">#</TableHead>
+                <TableHead className="w-40 border-r border-l">
+                  Seed type
+                </TableHead>
+                <TableHead className="border-r">Overworld</TableHead>
+                <TableHead className="border-r">Nether</TableHead>
+                <TableHead className="border-r">End</TableHead>
+                <TableHead className="border-r">RNG</TableHead>
+                <TableHead className="w-24 border-r">Status</TableHead>
+                <TableHead className="w-28 border-r">Replay</TableHead>
+                <TableHead className="w-24 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {seeds.map((seed, index) => {
+                return (
+                  <SortableTableRow
+                    key={seed._id}
+                    id={seed._id}
+                    disabled={!modificationsEnabled}
+                    handleLabel={`Reorder seed ${seed.seedNumber ?? index + 1}`}
+                  >
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {seed.seedNumber ?? index + 1}
+                    </TableCell>
+                    <TableCell className="border-r border-l font-medium">
+                      {seed.type ? SEED_TYPES[seed.type] : "Unspecified"}
+                    </TableCell>
+                    <SeedValueTableCell value={seed.overworld} />
+                    <SeedValueTableCell value={seed.nether} />
+                    <SeedValueTableCell value={seed.end} />
+                    <SeedValueTableCell value={seed.rng} />
+                    <TableCell className="border-r">
+                      <Badge variant={seed.isUsed ? "secondary" : "outline"}>
+                        {seed.isUsed ? "Used" : "Unused"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="border-r">
                       <Button
-                        aria-label={`Move seed ${seed.seedNumber ?? index + 1} up`}
-                        disabled={reorderDisabled || index === 0}
-                        onClick={() => void handleReorder(seed, "UP")}
-                        size="icon-sm"
+                        aria-label={`${seed.replayKey ? "Open" : "Upload"} replay for seed ${seed.seedNumber ?? index + 1}`}
+                        onClick={() => setReplaySeedId(seed._id)}
+                        className={
+                          seed.replayKey ? undefined : "text-muted-foreground"
+                        }
+                        size="sm"
                         type="button"
-                        variant="outline"
+                        variant={seed.replayKey ? "secondary" : "ghost"}
                       >
-                        {isMovingUp ? <Spinner /> : <ArrowUp />}
+                        <Film data-icon="inline-start" />
+                        {seed.replayKey ? "Replay" : "None"}
                       </Button>
-                      <Button
-                        aria-label={`Move seed ${seed.seedNumber ?? index + 1} down`}
-                        disabled={reorderDisabled || index === seeds.length - 1}
-                        onClick={() => void handleReorder(seed, "DOWN")}
-                        size="icon-sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        {isMovingDown ? <Spinner /> : <ArrowDown />}
-                      </Button>
-                      <Button
-                        aria-label={`Edit seed ${seed.seedNumber ?? index + 1}`}
-                        disabled={!modificationsEnabled}
-                        onClick={() => setEditingSeed(seed)}
-                        size="icon-sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        aria-label={`Delete seed ${seed.seedNumber ?? index + 1}`}
-                        disabled={!modificationsEnabled}
-                        onClick={() => setDeletingSeed(seed)}
-                        size="icon-sm"
-                        type="button"
-                        variant="destructive"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          aria-label={`Edit seed ${seed.seedNumber ?? index + 1}`}
+                          disabled={!modificationsEnabled}
+                          onClick={() => setEditingSeed(seed)}
+                          size="icon-sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          aria-label={`Delete seed ${seed.seedNumber ?? index + 1}`}
+                          disabled={!modificationsEnabled}
+                          onClick={() => setDeletingSeed(seed)}
+                          size="icon-sm"
+                          type="button"
+                          variant="destructive"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </SortableTableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </SortableSeedRows>
       )}
 
       {selectedLeague && selectedWeekNumber !== undefined && addDialogOpen && (
@@ -484,6 +508,17 @@ export function AdminSeedsPage() {
           weekNumber={selectedWeekNumber}
         />
       )}
+      {replaySeed && (
+        <ReplayDialog
+          canUpload={modificationsEnabled}
+          onOpenChange={(open) => {
+            if (!open) setReplaySeedId(null);
+          }}
+          open
+          seed={replaySeed}
+          uploadPaused={false}
+        />
+      )}
       <DeleteSeedDialog
         deleting={isDeleting}
         onConfirm={handleDelete}
@@ -504,6 +539,7 @@ function AdminSeedTableSkeleton() {
     >
       <TableHeader>
         <TableRow>
+          <TableHead className="w-8" />
           <TableHead className="w-14">#</TableHead>
           <TableHead className="w-40">Seed type</TableHead>
           <TableHead>Overworld</TableHead>
@@ -511,12 +547,16 @@ function AdminSeedTableSkeleton() {
           <TableHead>End</TableHead>
           <TableHead>RNG</TableHead>
           <TableHead className="w-24">Status</TableHead>
-          <TableHead className="w-44">Actions</TableHead>
+          <TableHead className="w-28">Replay</TableHead>
+          <TableHead className="w-24">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {Array.from({ length: 6 }).map((_, index) => (
           <TableRow key={index}>
+            <TableCell>
+              <Skeleton className="size-5" />
+            </TableCell>
             <TableCell>
               <Skeleton className="h-5 w-6" />
             </TableCell>
@@ -532,7 +572,10 @@ function AdminSeedTableSkeleton() {
               <Skeleton className="h-5 w-14" />
             </TableCell>
             <TableCell>
-              <Skeleton className="ml-auto h-6 w-36" />
+              <Skeleton className="h-5 w-16" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="ml-auto h-6 w-16" />
             </TableCell>
           </TableRow>
         ))}

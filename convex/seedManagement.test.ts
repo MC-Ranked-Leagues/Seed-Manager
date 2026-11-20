@@ -56,7 +56,7 @@ const updateSeed = makeFunctionReference<
 
 const reorderSeed = makeFunctionReference<
   "mutation",
-  { seedId: Id<"seeds">; movement: "UP" | "DOWN" },
+  { seedId: Id<"seeds">; position: number },
   null
 >("seedManagement:reorderSeed");
 
@@ -371,7 +371,7 @@ describe("admin seed management", () => {
     expect(cleared.league?.usedSeedCount).toBe(0);
   });
 
-  test("reorders against the latest adjacent seed within one league and week", async () => {
+  test("moves a seed to a new position within one league and week", async () => {
     const t = convexTest(schema, modules);
     const { adminId, leagueId, secondSeedId, otherWeekSeedId } = await t.run(
       async (ctx) => {
@@ -432,7 +432,7 @@ describe("admin seed management", () => {
 
     await admin.mutation(reorderSeed, {
       seedId: secondSeedId,
-      movement: "UP",
+      position: 3,
     });
 
     const ordered = await admin.query(listSeeds, {
@@ -447,9 +447,9 @@ describe("admin seed management", () => {
     }));
 
     expect(ordered.map((seed) => [seed.overworld, seed.seedNumber])).toEqual([
-      ["102", 1],
-      ["101", 2],
-      ["103", 3],
+      ["101", 1],
+      ["103", 2],
+      ["102", 3],
     ]);
     expect(result.otherWeekSeed?.seedNumber).toBe(2);
     expect(result.log).toMatchObject({
