@@ -67,6 +67,7 @@ import {
 } from "@/lib/seedManagement";
 import { BulkReplayUploadButton } from "@/routes/app/BulkReplayUploadButton";
 import { getSeedCountLabel } from "@/lib/utils";
+import { GlobalReplayUploadButton } from "./GlobalReplayUploadButton";
 import { SeedManagementDialog } from "./SeedManagementDialog";
 
 type ManagedSeed = FunctionReturnType<
@@ -227,7 +228,8 @@ export function AdminSeedsPage() {
             Browse and correct the ordered seed list for any league and week.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <GlobalReplayUploadButton disabled={!modificationsEnabled} />
           <Badge variant={modificationsEnabled ? "secondary" : "outline"}>
             {modificationsEnabled ? <ShieldCheck /> : <LockKeyhole />}
             {modificationsEnabled ? "Modifications enabled" : "Read only"}

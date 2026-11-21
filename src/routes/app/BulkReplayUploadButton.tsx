@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
-import { CircleCheck, CircleDashed, CircleX, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +13,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { ReplayUploadSection } from "@/components/ReplayUploadSection";
+import {
+  ReplayUploadStatusIcon,
+  type ReplayUploadStatus,
+} from "@/components/ReplayUploadStatusIcon";
 import { getErrorMessage } from "@/lib/errors";
 import { getReplayOverworldSeed, uploadReplayFile } from "@/lib/replay";
 
@@ -21,7 +25,7 @@ type PairedReplay = {
   file: File;
   seed: Doc<"seeds">;
   replacesExisting: boolean;
-  status: "pending" | "uploading" | "uploaded" | "failed";
+  status: ReplayUploadStatus;
   error?: string;
 };
 
@@ -178,10 +182,10 @@ export function BulkReplayUploadButton({
 
           {plan && (
             <div className="flex max-h-[60svh] flex-col gap-4 overflow-y-auto">
-              <ReplaySection title="Paired" count={plan.paired.length}>
+              <ReplayUploadSection title="Paired" count={plan.paired.length}>
                 {plan.paired.map((item) => (
                   <li key={item.seed._id} className="flex items-start gap-2">
-                    <PairedStatusIcon status={item.status} />
+                    <ReplayUploadStatusIcon status={item.status} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate">
                         Seed #{item.seed.seedNumber ?? "?"}{" "}
@@ -202,9 +206,9 @@ export function BulkReplayUploadButton({
                     </div>
                   </li>
                 ))}
-              </ReplaySection>
+              </ReplayUploadSection>
 
-              <ReplaySection
+              <ReplayUploadSection
                 title="Missing a replay"
                 count={missing.length}
                 tone="warning"
@@ -217,9 +221,9 @@ export function BulkReplayUploadButton({
                     </span>
                   </li>
                 ))}
-              </ReplaySection>
+              </ReplayUploadSection>
 
-              <ReplaySection
+              <ReplayUploadSection
                 title="No matching seed"
                 count={plan.unmatched.length}
                 tone="warning"
@@ -232,9 +236,9 @@ export function BulkReplayUploadButton({
                     </span>
                   </li>
                 ))}
-              </ReplaySection>
+              </ReplayUploadSection>
 
-              <ReplaySection
+              <ReplayUploadSection
                 title="Duplicates skipped"
                 count={plan.duplicates.length}
                 tone="warning"
@@ -248,9 +252,9 @@ export function BulkReplayUploadButton({
                     </span>
                   </li>
                 ))}
-              </ReplaySection>
+              </ReplayUploadSection>
 
-              <ReplaySection
+              <ReplayUploadSection
                 title="Not a valid replay"
                 count={plan.invalid.length}
                 tone="error"
@@ -258,7 +262,7 @@ export function BulkReplayUploadButton({
                 {plan.invalid.map((fileName) => (
                   <li key={fileName}>{fileName}</li>
                 ))}
-              </ReplaySection>
+              </ReplayUploadSection>
             </div>
           )}
 
@@ -292,57 +296,6 @@ export function BulkReplayUploadButton({
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function ReplaySection({
-  title,
-  count,
-  tone,
-  children,
-}: {
-  title: string;
-  count: number;
-  tone?: "warning" | "error";
-  children: ReactNode;
-}) {
-  if (count === 0) return null;
-
-  return (
-    <section className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium">{title}</h3>
-        <Badge
-          variant={
-            tone === "error"
-              ? "destructive"
-              : tone === "warning"
-                ? "outline"
-                : "secondary"
-          }
-        >
-          {count}
-        </Badge>
-      </div>
-      <ul className="flex flex-col gap-1 text-xs">{children}</ul>
-    </section>
-  );
-}
-
-function PairedStatusIcon({ status }: { status: PairedReplay["status"] }) {
-  if (status === "uploading") {
-    return <Spinner className="mt-0.5 size-3.5 shrink-0" />;
-  }
-  if (status === "uploaded") {
-    return (
-      <CircleCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-    );
-  }
-  if (status === "failed") {
-    return <CircleX className="mt-0.5 size-3.5 shrink-0 text-destructive" />;
-  }
-  return (
-    <CircleDashed className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
   );
 }
 

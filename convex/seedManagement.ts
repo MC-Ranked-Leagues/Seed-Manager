@@ -63,6 +63,49 @@ export const listSeeds = query({
   },
 });
 
+// matches replay files to seeds across every league and week
+export const findReplaySeeds = query({
+  args: { overworlds: v.array(v.string()) },
+  returns: v.array(
+    v.object({
+      seedId: v.id("seeds"),
+      overworld: v.string(),
+      seedNumber: v.optional(v.number()),
+      leagueNumber: v.number(),
+      leagueName: v.string(),
+      weekNumber: v.number(),
+      hasReplay: v.boolean(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const matches = [];
+    for (const overworld of new Set(args.overworlds)) {
+      const seed = await ctx.db
+        .query("seeds")
+        .withIndex("by_owseed", (q) => q.eq("overworld", overworld))
+        .unique();
+      if (!seed?.leagueId || !seed.assignedWeekNumber) continue;
+
+      const league = await ctx.db.get("leagues", seed.leagueId);
+      if (!league) continue;
+
+      matches.push({
+        seedId: seed._id,
+        overworld,
+        seedNumber: seed.seedNumber,
+        leagueNumber: league.leagueNumber,
+        leagueName: league.leagueName,
+        weekNumber: seed.assignedWeekNumber,
+        hasReplay: Boolean(seed.replayKey),
+      });
+    }
+
+    return matches;
+  },
+});
+
 export const addSeed = mutation({
   args: {
     leagueId: v.id("leagues"),
